@@ -1,10 +1,8 @@
 export default async function handler(req, res) {
-  // Allow all origins
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info, prefer');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, x-client-info, prefer, x-supabase-api-version');
 
-  // Handle preflight
   if(req.method === 'OPTIONS'){
     res.status(200).end();
     return;
@@ -13,32 +11,49 @@ export default async function handler(req, res) {
   const SUPABASE_URL = 'https://qpdkzokhebhipxwcpvle.supabase.co';
   const ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-  // Build the target Supabase URL
-  const path = req.url.replace('/api/proxy', '');
+  // Get the path after /api/proxy
+  const fullUrl = req.url;
+  const path = fullUrl.replace(/^\/api\/proxy/, '');
   const target = `${SUPABASE_URL}${path}`;
 
   try {
-    const response = await fetch(target, {
+    // Forward all headers from client
+    const forwardHeaders = {
+      'Content-Type': 'application/json',
+      'apikey': ANON_KEY,
+      'Authorization': req.headers['authorization'] || `Bearer ${ANON_KEY}`,
+    };
+
+    // Forward optional headers if present
+    if(req.headers['x-client-info']) forwardHeaders['x-client-info'] = req.headers['x-client-info'];
+    if(req.headers['prefer']) forwardHeaders['prefer'] = req.headers['prefer'];
+    if(req.headers['x-supabase-api-version']) forwardHeaders['x-supabase-api-version'] = req.headers['x-supabase-api-version'];
+
+    const fetchOptions = {
       method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': ANON_KEY,
-        'Authorization': req.headers.authorization || `Bearer ${ANON_KEY}`,
-        'x-client-info': req.headers['x-client-info'] || '',
-        'prefer': req.headers['prefer'] || ''
-      },
-      body: req.method !== 'GET' && req.method !== 'HEAD'
-        ? JSON.stringify(req.body)
-        : undefined
+      headers: forwardHeaders,
+    };
+
+    // Only add body for non-GET requests
+    if(req.method !== 'GET' && req.method !== 'HEAD'){
+      fetchOptions.body = JSON.stringify(req.body);
+    }
+
+    const response = await fetch(target, fetchOptions);
+    const text = await response.text();
+
+    // Forward all response headers from Supabase
+    response.headers.forEach((value, key) => {
+      // Skip headers that cause issues
+      if(!['content-encoding','transfer-encoding','connection'].includes(key)){
+        res.setHeader(key, value);
+      }
     });
 
-    const text = await response.text();
-    let data;
-    try { data = JSON.parse(text); }
-    catch { data = text; }
+    res.status(response.status).send(text);
 
-    res.status(response.status).json(data);
   } catch(err) {
+    console.error('Proxy error:', err);
     res.status(500).json({ error: err.message });
   }
 }
