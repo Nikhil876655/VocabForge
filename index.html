@@ -1,0 +1,1997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>VocabForge — SSC CGL</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#0d0c18;color:#e8e6ff;font-family:'Segoe UI',sans-serif;min-height:100vh;}
+input,textarea,select,button{font-family:inherit;}
+button{cursor:pointer;}
+input:focus,textarea:focus{outline:none;border-color:#f4b942!important;}
+
+/* ── Animations ── */
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pop{0%{transform:scale(.85);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.pop{animation:pop .22s ease forwards;}
+
+/* ── Screens ── */
+.screen{display:none;} .screen.active{display:block;}
+
+/* ── Shared tokens ── */
+:root{
+  --bg: #0d0c18;
+  --surface: #161428;
+  --surface2: #1e1c33;
+  --border: #252340;
+  --muted: #6b6984;
+  --label: #9390b0;
+  --gold: #f4b942;
+  --gold2: #e8702a;
+  --green: #4ade80;
+  --red: #f87171;
+  --blue: #60a5fa;
+}
+
+/* ── Buttons ── */
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d0c18;border:none;border-radius:10px;font-weight:800;padding:.85rem 1rem;font-size:.95rem;transition:opacity .15s;}
+.btn-gold:hover{opacity:.88;}
+.btn-outline{background:var(--surface);color:var(--label);border:1.5px solid var(--border);border-radius:10px;padding:.8rem 1rem;font-size:.9rem;font-weight:600;transition:all .15s;}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.opt-btn{display:flex;align-items:center;gap:.85rem;padding:.8rem 1rem;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:#e8e6ff;text-align:left;font-size:.9rem;transition:all .15s;width:100%;}
+.opt-btn:hover:not(:disabled){border-color:var(--gold);background:rgba(244,185,66,.06);}
+.opt-btn:disabled{cursor:default;}
+.opt-btn.correct{border-color:var(--green);background:rgba(74,222,128,.1);color:var(--green);}
+.opt-btn.wrong{border-color:var(--red);background:rgba(248,113,113,.1);color:var(--red);}
+
+/* ── Mode pills ── */
+.mode-pill{padding:.45rem .9rem;border-radius:20px;font-size:.78rem;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);white-space:nowrap;transition:all .15s;}
+.mode-pill:hover{border-color:var(--gold);color:var(--gold);}
+.mode-pill.active{background:rgba(244,185,66,.14);border-color:var(--gold);color:var(--gold);}
+
+/* ── Tab bar ── */
+.tab-btn{padding:.4rem .8rem;border-radius:6px;font-size:.75rem;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);white-space:nowrap;transition:all .15s;}
+.tab-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ── Inputs ── */
+.inp{width:100%;padding:.6rem .8rem;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:#e8e6ff;font-size:.88rem;}
+textarea.inp{resize:vertical;}
+
+/* ── List rows ── */
+.row-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;display:flex;gap:.75rem;align-items:flex-start;}
+.del-btn{padding:.3rem .55rem;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:.75rem;transition:all .15s;flex-shrink:0;}
+.del-btn:hover{background:rgba(248,113,113,.18);border-color:var(--red);color:var(--red);}
+
+/* ── Misc ── */
+.label-xs{font-family:monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;}
+.sr-pip{display:inline-block;width:8px;height:8px;border-radius:50%;}
+.mastery-bar-track{height:5px;background:var(--surface);border-radius:3px;overflow:hidden;margin-top:.3rem;}
+.mastery-bar-fill{height:100%;border-radius:3px;transition:width .7s ease;}
+.cal-dot{width:10px;height:10px;border-radius:2px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;}
+.sticky-header{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);padding:.9rem 1.2rem;display:flex;align-items:center;gap:.85rem;}
+
+/* ── Section divider label ── */
+.section-label{font-family:monospace;font-size:.6rem;letter-spacing:.2em;color:#c8922a;text-transform:uppercase;margin-bottom:.55rem;}
+
+/* ── Collapsible stats ── */
+.stats-panel{overflow:hidden;max-height:0;transition:max-height .35s ease;}
+.stats-panel.open{max-height:600px;}
+
+/* ── Auth gate overlay ── */
+#auth-gate{
+  position:fixed;inset:0;z-index:200;
+  background:#0d0c18;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:1.8rem 1.5rem;
+  transition:opacity .35s ease;
+}
+#auth-gate.hiding{opacity:0;pointer-events:none;}
+
+/* ── Paywall overlay ── */
+#paywall-gate{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(13,12,24,.97);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:1.8rem 1.5rem;
+  backdrop-filter:blur(4px);
+}
+
+/* ── Trial banner ── */
+#trial-banner{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  background:linear-gradient(90deg,rgba(244,185,66,.12),rgba(232,112,42,.1));
+  border-top:1px solid rgba(244,185,66,.3);
+  padding:.55rem 1.2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:.72rem;
+  display:none;
+}
+
+/* ── Intro overlay ── */
+#intro-overlay{
+  position:fixed;inset:0;z-index:100;
+  background:#0d0c18;
+  display:flex;flex-direction:column;align-items:center;
+  padding:1.5rem 1.5rem 1.2rem;
+  transition:opacity .4s ease, transform .4s ease;
+  overflow:hidden;
+}
+#intro-overlay.hiding{opacity:0;transform:scale(.97);pointer-events:none;}
+
+/* Scrollable slide area — grows to fill space between dots and buttons */
+#intro-slide-wrap{
+  flex:1;
+  overflow-y:auto;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:.5rem;
+}
+#intro-slide-wrap::-webkit-scrollbar{display:none;}
+
+/* Slide transition for intro steps */
+.intro-slide{
+  width:100%;max-width:420px;
+  animation:slideUp .35s ease both;
+}
+@keyframes introPop{
+  0%{opacity:0;transform:translateY(18px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+.intro-fade{animation:introPop .32s ease both;}
+
+/* Dot indicators */
+.intro-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--border);transition:background .25s, transform .25s;
+}
+.intro-dot.active{background:var(--gold);transform:scale(1.25);}
+
+/* Feature card in intro */
+.feat-card{
+  display:flex;align-items:flex-start;gap:.9rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:.9rem 1rem;
+  animation:introPop .3s ease both;
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ AUTH GATE ══════════════════ -->
+<div id="auth-gate">
+  <div style="width:100%;max-width:380px;">
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div style="font-size:2.4rem;font-weight:900;letter-spacing:-.03em;">
+        <span style="color:var(--gold);">VOCAB</span><span>FORGE</span>
+      </div>
+      <div style="font-size:.68rem;font-family:monospace;letter-spacing:.2em;color:#c8922a;margin-top:.3rem;">SSC CGL VOCABULARY</div>
+    </div>
+
+    <!-- Tab toggle -->
+    <div style="display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.25rem;margin-bottom:1.4rem;">
+      <button id="tab-login" onclick="switchAuthTab('login')"
+        style="flex:1;padding:.55rem;border-radius:7px;border:none;font-size:.85rem;font-weight:700;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d0c18;transition:all .2s;">Sign In</button>
+      <button id="tab-signup" onclick="switchAuthTab('signup')"
+        style="flex:1;padding:.55rem;border-radius:7px;border:none;font-size:.85rem;font-weight:600;background:transparent;color:var(--muted);transition:all .2s;">Sign Up</button>
+    </div>
+
+    <!-- Fields -->
+    <div style="display:flex;flex-direction:column;gap:.65rem;margin-bottom:.9rem;">
+      <input class="inp" id="auth-email" type="email" placeholder="Email address" autocomplete="email">
+      <div style="position:relative;">
+        <input class="inp" id="auth-pass" type="password" placeholder="Password" autocomplete="current-password" style="padding-right:2.8rem;">
+        <button onclick="toggleAuthPass()" style="position:absolute;right:.7rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-size:.85rem;">👁</button>
+      </div>
+      <!-- Referral field — only shown on signup -->
+      <input class="inp" id="auth-ref" type="text" placeholder="Referral code (optional)" style="display:none;font-family:monospace;font-size:.82rem;">
+    </div>
+
+    <!-- Trial info — shown on signup tab -->
+    <div id="trial-info" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:.75rem 1rem;margin-bottom:.9rem;font-size:.78rem;color:var(--muted);line-height:1.6;">
+      🎁 <strong style="color:#e8e6ff;">3 days free</strong> — no card needed.<br>
+      Have a referral code? Get <strong style="color:var(--gold);">30 days free</strong> instead.
+    </div>
+
+    <!-- Error -->
+    <div id="auth-error" style="display:none;background:rgba(248,113,113,.1);border:1px solid var(--red);border-radius:8px;padding:.6rem .9rem;font-size:.8rem;color:var(--red);margin-bottom:.75rem;"></div>
+
+    <!-- Submit -->
+    <button id="auth-submit-btn" onclick="handleAuth()"
+      style="width:100%;padding:.88rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d0c18;font-size:.95rem;font-weight:800;margin-bottom:.9rem;">
+      Sign In
+    </button>
+
+    <!-- Divider -->
+    <div style="text-align:center;font-size:.75rem;color:var(--muted);">
+      ₹50/month after trial · Cancel anytime
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAYWALL GATE ══════════════════ -->
+<div id="paywall-gate">
+  <div style="width:100%;max-width:380px;text-align:center;">
+
+    <!-- Close button — only visible if user still has trial access -->
+    <div id="paywall-close-wrap" style="text-align:right;margin-bottom:.6rem;display:none;">
+      <button onclick="closePaywall()"
+        style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem .8rem;color:var(--muted);font-size:.8rem;cursor:pointer;transition:all .15s;"
+        onmouseover="this.style.borderColor='var(--label)';this.style.color='var(--label)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        ✕ Close
+      </button>
+    </div>
+    <div style="font-size:2.5rem;margin-bottom:.6rem;">⏰</div>
+    <div style="font-size:1.3rem;font-weight:900;margin-bottom:.4rem;">Trial Ended</div>
+    <div style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:1.5rem;">
+      Your free trial has expired. Continue your SSC prep for just ₹50/month.
+    </div>
+
+    <!-- Plan card -->
+    <div style="background:var(--surface);border:1.5px solid rgba(244,185,66,.4);border-radius:14px;padding:1.2rem;margin-bottom:1.2rem;text-align:left;">
+      <div style="font-size:.65rem;font-family:monospace;letter-spacing:.18em;color:#c8922a;margin-bottom:.5rem;">PRO PLAN</div>
+      <div style="font-size:2rem;font-weight:900;color:var(--gold);line-height:1;">₹50<span style="font-size:.9rem;font-weight:400;color:var(--muted);">/month</span></div>
+      <div style="margin-top:.9rem;display:flex;flex-direction:column;gap:.4rem;font-size:.8rem;color:var(--label);">
+        <div>✓ Unlimited quiz sessions</div>
+        <div>✓ Spaced repetition tracking</div>
+        <div>✓ All 5 word categories</div>
+        <div>✓ Custom word manager</div>
+      </div>
+    </div>
+
+    <button onclick="handlePayment()"
+      style="width:100%;padding:.9rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d0c18;font-size:1rem;font-weight:800;margin-bottom:.85rem;box-shadow:0 4px 20px rgba(244,185,66,.3);">
+      Pay ₹50 with Razorpay →
+    </button>
+
+    <!-- Referral share -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;text-align:left;margin-bottom:.9rem;">
+      <div style="font-size:.72rem;font-weight:700;margin-bottom:.3rem;">🎁 Share & get 30 days free</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;">Your friend gets 30 days free. You get 30 days free.</div>
+      <div style="display:flex;gap:.4rem;">
+        <input id="paywall-ref-link" readonly class="inp" style="font-size:.7rem;font-family:monospace;padding:.45rem .65rem;">
+        <button onclick="copyRefLink()" style="padding:.45rem .8rem;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--gold);font-size:.72rem;font-weight:700;white-space:nowrap;flex-shrink:0;">Copy</button>
+      </div>
+    </div>
+
+    <button onclick="handleLogout()" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Sign out</button>
+  </div>
+</div>
+
+<!-- ══════════════════ TRIAL BANNER ══════════════════ -->
+<div id="trial-banner">
+  <div id="trial-banner-text" style="color:var(--gold);font-weight:600;"></div>
+  <button onclick="showPaywall()" style="background:rgba(244,185,66,.15);border:1px solid rgba(244,185,66,.3);border-radius:5px;padding:.2rem .6rem;color:var(--gold);font-size:.7rem;font-weight:700;">Upgrade</button>
+</div>
+
+<!-- ══════════════════ INTRO OVERLAY ══════════════════ -->
+<div id="intro-overlay">
+  <!-- Step indicator dots -->
+  <div style="display:flex;gap:.5rem;margin-bottom:1.4rem;flex-shrink:0;" id="intro-dots"></div>
+
+  <!-- Slide container — scrollable -->
+  <div id="intro-slide-wrap" style="width:100%;max-width:420px;"></div>
+
+  <!-- Nav buttons — always visible at bottom -->
+  <div style="display:flex;gap:.7rem;width:100%;max-width:420px;margin-top:1.2rem;flex-shrink:0;">
+    <button id="intro-back-btn" onclick="introBack()"
+      style="flex:1;padding:.78rem;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-size:.9rem;font-weight:600;transition:all .15s;display:none;"
+      onmouseover="this.style.borderColor='var(--label)'" onmouseout="this.style.borderColor='var(--border)'">← Back</button>
+    <button id="intro-next-btn" onclick="introNext()"
+      style="flex:1;padding:.78rem;border-radius:10px;border:none;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0d0c18;font-size:.9rem;font-weight:800;transition:opacity .15s;">
+      Get Started →
+    </button>
+  </div>
+
+  <!-- Skip link -->
+  <button onclick="finishIntro()" id="intro-skip"
+    style="margin-top:.75rem;background:none;border:none;color:var(--muted);font-size:.78rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;flex-shrink:0;">
+    Skip intro
+  </button>
+</div>
+
+<!-- ══════════════════ HOME ══════════════════ -->
+<div id="screen-home" class="screen active">
+<div style="max-width:480px;margin:0 auto;padding:1.6rem 1.1rem 5rem;">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.4rem;animation:slideUp .35s ease;">
+    <div style="font-size:clamp(1.8rem,7vw,2.6rem);font-weight:900;letter-spacing:-.03em;line-height:1;">
+      <span style="color:var(--gold);">VOCAB</span><span>FORGE</span>
+    </div>
+    <div style="text-align:right;">
+      <div id="total-count" style="font-size:.72rem;color:var(--muted);font-family:monospace;"></div>
+      <div id="mastery-summary" style="font-size:.72rem;color:var(--muted);margin-top:.1rem;"></div>
+    </div>
+  </div>
+
+  <!-- TODAY'S REVIEW card -->
+  <div id="review-card" style="margin-bottom:1.1rem;animation:slideUp .3s ease .05s both;"></div>
+
+  <!-- ── Free Practice ── -->
+  <div style="animation:slideUp .3s ease .1s both;">
+    <div class="section-label">Free Practice</div>
+
+    <!-- Mode pills scroll -->
+    <div style="display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.2rem;margin-bottom:.9rem;scrollbar-width:none;" id="mode-grid"></div>
+
+    <!-- Quiz config row -->
+    <div class="card" style="padding:.9rem 1rem;margin-bottom:.9rem;">
+      <!-- Question count -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+        <span style="font-size:.82rem;color:var(--label);">Questions</span>
+        <span id="count-display" style="font-family:monospace;font-size:.88rem;color:var(--gold);font-weight:700;">10</span>
+      </div>
+      <input type="range" id="count-range" min="5" max="30" step="5" value="10"
+        style="width:100%;accent-color:var(--gold);cursor:pointer;margin-bottom:.25rem;">
+      <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted);font-family:monospace;margin-bottom:.8rem;">
+        <span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span>
+      </div>
+
+      <!-- Timer toggle -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:.85rem;font-weight:600;">⏱ Timed Mode</div>
+          <div style="font-size:.7rem;color:var(--muted);">20 sec per question</div>
+        </div>
+        <div id="timer-toggle" onclick="toggleTimer()"
+          style="width:42px;height:23px;border-radius:12px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;">
+          <div id="timer-knob"
+            style="width:17px;height:17px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:left .2s;"></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-gold" id="free-quiz-btn" onclick="startFreeQuiz()" style="width:100%;margin-bottom:.55rem;">⚡ Start Free Practice</button>
+  </div>
+
+  <!-- ── Word Manager link ── -->
+  <button class="btn-outline" onclick="showScreen('manager')" style="width:100%;margin-bottom:1.4rem;display:flex;align-items:center;justify-content:space-between;animation:slideUp .3s ease .15s both;">
+    <span>✏️ Word Manager</span>
+    <span id="manager-count" style="font-family:monospace;font-size:.72rem;background:var(--surface2);padding:.15rem .55rem;border-radius:5px;color:var(--gold);"></span>
+  </button>
+
+  <!-- ── Stats toggle ── -->
+  <button onclick="toggleStats()" id="stats-toggle-btn"
+    style="width:100%;padding:.6rem 1rem;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:.8rem;display:flex;align-items:center;justify-content:space-between;transition:all .15s;margin-bottom:.8rem;animation:slideUp .3s ease .2s both;"
+    onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+    <span>📊 Mastery & Activity</span>
+    <span id="stats-chevron" style="font-size:.7rem;">▼</span>
+  </button>
+
+  <!-- ── Collapsible stats panel ── -->
+  <div class="stats-panel" id="stats-panel">
+    <!-- Category SR progress -->
+    <div style="margin-bottom:1.1rem;">
+      <div class="section-label">Mastery Progress</div>
+      <div id="cat-progress" style="display:flex;flex-direction:column;gap:.45rem;"></div>
+    </div>
+
+    <!-- Activity calendar -->
+    <div>
+      <div class="section-label">Activity — Last 4 Weeks</div>
+      <div id="cal-grid" style="display:flex;gap:.28rem;flex-wrap:wrap;"></div>
+      <div id="streak-label" style="font-family:monospace;font-size:.65rem;color:var(--muted);margin-top:.5rem;"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════ QUIZ ══════════════════ -->
+<div id="screen-quiz" class="screen">
+<div style="max-width:520px;margin:0 auto;padding:1.2rem 1.1rem 3rem;">
+
+  <!-- Top bar -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem;">
+    <button onclick="exitQuiz()" style="background:none;border:none;color:var(--muted);font-size:.85rem;padding:0;">← Exit</button>
+    <div style="display:flex;gap:.85rem;align-items:center;">
+      <div id="quiz-mode-label" style="font-family:monospace;font-size:.65rem;color:#c8922a;"></div>
+      <div id="streak-display" style="font-family:monospace;font-size:.75rem;color:#fb923c;display:none;"></div>
+      <div id="score-display" style="font-family:monospace;font-size:.78rem;color:var(--gold);"></div>
+      <div id="qnum-display" style="font-family:monospace;font-size:.72rem;color:var(--muted);"></div>
+    </div>
+  </div>
+
+  <!-- Progress bars -->
+  <div style="height:3px;background:var(--surface);border-radius:2px;margin-bottom:.35rem;overflow:hidden;">
+    <div id="progress-bar" style="height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .3s ease;width:0%;"></div>
+  </div>
+  <div id="timer-bar-wrap" style="height:3px;background:var(--surface);border-radius:2px;margin-bottom:.75rem;overflow:hidden;display:none;">
+    <div id="timer-bar" style="height:100%;background:var(--green);transition:width 1s linear;width:100%;"></div>
+  </div>
+
+  <!-- Type badge + timer -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+    <div id="type-badge" style="padding:.2rem .65rem;border-radius:4px;font-family:monospace;font-size:.6rem;letter-spacing:.15em;"></div>
+    <div id="timer-countdown" style="font-family:monospace;font-size:.8rem;color:var(--muted);display:none;"></div>
+  </div>
+
+  <!-- Question card -->
+  <div id="question-card" style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.2rem;margin-bottom:.85rem;animation:slideUp .25s ease;">
+    <div id="sr-stage-hint" style="font-family:monospace;font-size:.6rem;color:var(--muted);margin-bottom:.5rem;display:none;"></div>
+    <div id="question-text" style="font-size:1.05rem;line-height:1.75;font-weight:500;white-space:pre-line;"></div>
+  </div>
+
+  <div id="options-container" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:.75rem;"></div>
+  <div id="timeout-notice" style="background:rgba(248,113,113,.1);border:1px solid var(--red);border-radius:8px;padding:.6rem 1rem;color:var(--red);font-size:.82rem;margin-bottom:.65rem;display:none;"></div>
+  <div id="sr-feedback" style="border-radius:8px;padding:.55rem 1rem;font-size:.8rem;margin-bottom:.5rem;display:none;animation:slideUp .2s ease;"></div>
+  <div id="explanation-box" style="background:rgba(244,185,66,.06);border-left:3px solid var(--gold);border-radius:8px;padding:.8rem 1rem;font-size:.85rem;line-height:1.65;color:#c8b98a;margin-bottom:.7rem;display:none;animation:slideUp .2s ease;"></div>
+  <button id="next-btn" onclick="nextQuestion()" style="width:100%;padding:.85rem;border-radius:10px;font-size:.93rem;font-weight:600;display:none;animation:slideUp .2s ease;"></button>
+</div>
+</div>
+
+<!-- ══════════════════ RESULT ══════════════════ -->
+<div id="screen-result" class="screen">
+<div style="max-width:480px;margin:0 auto;padding:2rem 1.1rem 4rem;animation:slideUp .4s ease;">
+  <div style="text-align:center;margin-bottom:1.5rem;">
+    <div id="result-icon" style="font-size:2.6rem;margin-bottom:.4rem;"></div>
+    <div id="result-label" style="font-size:1.7rem;font-weight:900;"></div>
+    <div id="result-score" style="font-size:3rem;font-weight:900;color:var(--gold);line-height:1.1;"></div>
+    <div id="result-pct" style="font-size:.9rem;color:var(--muted);"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:1rem;" id="result-stats"></div>
+  <div id="result-sr-summary" style="margin-bottom:1rem;"></div>
+  <div id="wrong-review" style="margin-bottom:1.4rem;display:none;">
+    <div class="section-label" style="color:var(--red);margin-bottom:.5rem;">Review Wrong Answers</div>
+    <div id="wrong-list" style="display:flex;flex-direction:column;gap:.4rem;"></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:.55rem;">
+    <button class="btn-gold" id="result-again-btn" style="width:100%;"></button>
+    <button class="btn-outline" onclick="showScreen('home')" style="width:100%;">← Back to Home</button>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════ MANAGER ══════════════════ -->
+<div id="screen-manager" class="screen">
+  <!-- Sticky header -->
+  <div class="sticky-header">
+    <button onclick="showScreen('home')" style="background:none;border:none;color:var(--muted);font-size:.9rem;padding:0;">← Back</button>
+    <div style="font-weight:700;font-size:.95rem;">✏️ Word Manager</div>
+    <div id="mgr-count" style="margin-left:auto;font-family:monospace;font-size:.7rem;color:var(--gold);"></div>
+  </div>
+
+  <div style="max-width:560px;margin:0 auto;padding:1rem 1.1rem 4rem;">
+
+    <!-- Export / Import -->
+    <div style="display:flex;gap:.5rem;margin-bottom:.4rem;">
+      <button onclick="exportWords()"
+        style="flex:1;padding:.6rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--green);font-size:.78rem;font-weight:600;cursor:pointer;transition:border-color .15s;"
+        onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">⬇ Export</button>
+      <button onclick="document.getElementById('import-input').click()"
+        style="flex:1;padding:.6rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--blue);font-size:.78rem;font-weight:600;cursor:pointer;transition:border-color .15s;"
+        onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">⬆ Import</button>
+      <input type="file" id="import-input" accept=".json" style="display:none;" onchange="importWords(this)">
+    </div>
+    <div id="import-export-msg" style="display:none;margin-bottom:.65rem;font-size:.75rem;text-align:center;font-family:monospace;padding:0 .5rem;"></div>
+
+    <!-- Category tabs -->
+    <div id="tab-bar" style="display:flex;gap:.35rem;overflow-x:auto;margin-bottom:1.1rem;padding-bottom:.2rem;margin-top:.65rem;"></div>
+
+    <!-- Add form -->
+    <div id="add-form-wrap" class="card" style="padding:1.1rem;margin-bottom:1rem;"></div>
+
+    <!-- Search -->
+    <div style="position:relative;margin-bottom:.6rem;">
+      <span style="position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.85rem;">🔍</span>
+      <input class="inp" id="search-input" oninput="renderList()" placeholder="Search entries…" style="padding-left:2.2rem;">
+    </div>
+    <div id="list-count" class="label-xs" style="color:var(--muted);margin-bottom:.5rem;"></div>
+    <div id="word-list" style="display:flex;flex-direction:column;gap:.4rem;"></div>
+  </div>
+</div>
+
+<script>
+// ── Stats panel toggle ──
+let statsOpen = false;
+function toggleStats(){
+  statsOpen = !statsOpen;
+  document.getElementById('stats-panel').classList.toggle('open', statsOpen);
+  document.getElementById('stats-chevron').textContent = statsOpen ? '▲' : '▼';
+  if(statsOpen) renderStatsPanel();
+}
+function renderStatsPanel(){
+  const srC = getSRCounts();
+  const catMeta = [
+    {key:'synonyms',label:'Syn/Ant',color:'#60a5fa'},
+    {key:'ows',label:'One Word',color:'#a78bfa'},
+    {key:'idioms',label:'Idioms',color:'#fb923c'},
+    {key:'phrasal',label:'Phrasal',color:'#e879f9'},
+    {key:'foreign',label:'Foreign',color:'#38bdf8'},
+  ];
+  document.getElementById('cat-progress').innerHTML = catMeta.map(m=>{
+    const c = srC[m.key];
+    const tot = db[m.key].length;
+    const mastered = c[4]||0;
+    const pct = tot>0 ? Math.round((mastered/tot)*100) : 0;
+    const pipRow = [0,1,2,3,4].map(s=>`
+      <span style="display:inline-flex;align-items:center;gap:.2rem;font-size:.6rem;color:${SR_STAGE_COLORS[s]};">
+        <span class="sr-pip" style="background:${SR_STAGE_COLORS[s]};opacity:.85;"></span>${c[s]||0}
+      </span>`).join('');
+    return `<div style="background:#1e1c33;border:1px solid #252340;border-radius:8px;padding:.6rem .85rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:.78rem;font-weight:600;color:${m.color};">${m.label}</span>
+        <span style="font-family:monospace;font-size:.68rem;color:var(--gold);">${pct}%</span>
+      </div>
+      <div class="mastery-bar-track">
+        <div class="mastery-bar-fill" style="width:${pct}%;background:${m.color};"></div>
+      </div>
+      <div style="display:flex;gap:.6rem;margin-top:.35rem;flex-wrap:wrap;">${pipRow}</div>
+    </div>`;
+  }).join('');
+
+  const today = new Date(); const actSet = new Set(activityLog);
+  const calHTML = [];
+  for(let i=27;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const active=actSet.has(ds);
+    calHTML.push(`<div class="cal-dot" title="${ds}" style="background:${active?'#f4b942':'#1e1c33'};border:1px solid ${active?'rgba(244,185,66,.5)':'#252340'};"></div>`);
+  }
+  document.getElementById('cal-grid').innerHTML = calHTML.join('');
+
+  let cStreak=0; let d2=new Date(today);
+  while(true){ const ds=d2.toISOString().slice(0,10); if(actSet.has(ds)){cStreak++;d2.setDate(d2.getDate()-1);}else break; }
+  document.getElementById('streak-label').innerHTML =
+    cStreak>0 ? `🔥 <span style="color:#fb923c;font-weight:700;">${cStreak}</span> day streak &nbsp;·&nbsp; ${activityLog.length} total sessions`
+              : `${activityLog.length} total sessions`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// DEFAULT DATA
+// ══════════════════════════════════════════════════════════════
+const DEFAULT_SYNONYMS = [
+  {word:"AWKWARD",syns:["clumsy","ungainly","ponderous","rough"],ants:["clever","dexterous","apt","skilful"]},
+  {word:"APPARENT",syns:["evident","obvious","perceptible","distinct"],ants:["masked","obscure","indistinct","doubtful"]},
+  {word:"ALLURE",syns:["entice","fascinate","tempt","seduce"],ants:["repulse","repel","deter","distaste"]},
+  {word:"ABORTIVE",syns:["vain","useless","fruitless","unproductive"],ants:["effectual","productive","successful","progressive"]},
+  {word:"ABOMINABLE",syns:["odious","detestable","repugnant","aversion"],ants:["likeable","pleasant","affectionate","enjoyable"]},
+  {word:"ALLAY",syns:["pacify","soothe","lighten","assuage"],ants:["aggravate","heighten","agitate","excite"]},
+  {word:"AXIOM",syns:["maxim","saying","dictum","truth"],ants:["absurdity","blunder","ridiculousness","irrelevant"]},
+  {word:"ASSIDUOUS",syns:["constant","diligent","attentive","persevering"],ants:["indifference","careless","indolent","lethargic"]},
+  {word:"ABJURE",syns:["forsake","renounce","retract","revoke"],ants:["approve","sanction","patronise","adopt"]},
+  {word:"ABJECT",syns:["despicable","servile","base","contemptible"],ants:["exalted","commendable","praiseworthy","imposing"]},
+  {word:"AVERSION",syns:["dislike","hatred","indifferent","apathy"],ants:["affection","fondness","niceness","liking"]},
+  {word:"AUTHENTIC",syns:["genuine","reliable","valid","guaranteed"],ants:["fictitious","counterfeit","unreal","false"]},
+  {word:"AUDACITY",syns:["boldness","arrogance","insolence","haughtiness"],ants:["mildness","humility","cowardice","submission"]},
+  {word:"ASTUTE",syns:["clever","intelligent","wise","brilliant"],ants:["dull","unintelligent","shallow","solid"]},
+  {word:"ABETTOR",syns:["assistant","accomplice","colleague","associate"],ants:["opponent","adversary","antagonist","rival"]},
+  {word:"ABATE",syns:["moderate","mitigate","lessen","decrease"],ants:["aggravate","intensify","augment","supplement"]},
+  {word:"ARRAIGN",syns:["charge","blame","accuse","complain"],ants:["exculpate","pardon","condone","exonerate"]},
+  {word:"APATHY",syns:["unconcern","indifference","insensitivity","aloofness"],ants:["concern","care","anxiety","eagerness"]},
+  {word:"ALIEN",syns:["foreigner","outsider","stranger","emigrant"],ants:["native","citizen","resident","occupant"]},
+  {word:"BENEVOLENT",syns:["kind","charitable","generous","philanthropic"],ants:["cruel","malevolent","selfish","unkind"]},
+  {word:"BAFFLE",syns:["perplex","confuse","puzzle","bewilder"],ants:["clarify","enlighten","explain","inform"]},
+  {word:"BLUNT",syns:["dull","obtuse","insensitive","abrupt"],ants:["sharp","sensitive","acute","tactful"]},
+  {word:"BRAVE",syns:["courageous","bold","valiant","gallant"],ants:["cowardly","timid","afraid","fearful"]},
+  {word:"CANDID",syns:["frank","honest","open","sincere"],ants:["dishonest","insincere","secretive","evasive"]},
+  {word:"CALLOUS",syns:["hardened","indifferent","insensitive","unfeeling"],ants:["sensitive","compassionate","tender","sympathetic"]},
+  {word:"CONCEAL",syns:["hide","cover","mask","suppress"],ants:["reveal","expose","disclose","uncover"]},
+  {word:"DILIGENT",syns:["hardworking","industrious","assiduous","persevering"],ants:["lazy","idle","negligent","careless"]},
+  {word:"DOCILE",syns:["meek","submissive","tame","obedient"],ants:["stubborn","obstinate","defiant","rebellious"]},
+  {word:"ELOQUENT",syns:["fluent","articulate","expressive","persuasive"],ants:["inarticulate","silent","dumb","inexpressive"]},
+  {word:"EMINENT",syns:["famous","distinguished","renowned","prominent"],ants:["unknown","obscure","insignificant","ordinary"]},
+  {word:"FEROCIOUS",syns:["fierce","savage","brutal","wild"],ants:["gentle","tame","mild","peaceful"]},
+  {word:"FRUGAL",syns:["thrifty","economical","sparing","careful"],ants:["extravagant","wasteful","lavish","generous"]},
+  {word:"GARRULOUS",syns:["talkative","chatty","loquacious","verbose"],ants:["silent","taciturn","quiet","reserved"]},
+  {word:"HAMPER",syns:["hinder","obstruct","impede","restrict"],ants:["assist","help","facilitate","promote"]},
+  {word:"HUMBLE",syns:["modest","meek","unassuming","submissive"],ants:["proud","arrogant","haughty","boastful"]},
+  {word:"INSOLENT",syns:["rude","impertinent","disrespectful","arrogant"],ants:["polite","respectful","courteous","humble"]},
+  {word:"JUBILANT",syns:["joyful","elated","triumphant","exultant"],ants:["sad","sorrowful","dejected","melancholy"]},
+  {word:"LAVISH",syns:["extravagant","generous","profuse","abundant"],ants:["frugal","stingy","meagre","scanty"]},
+  {word:"LETHARGIC",syns:["sluggish","inactive","dull","drowsy"],ants:["active","energetic","lively","alert"]},
+  {word:"MAGNANIMOUS",syns:["generous","noble","charitable","unselfish"],ants:["selfish","petty","mean","stingy"]},
+  {word:"MALICIOUS",syns:["spiteful","wicked","hateful","vicious"],ants:["kind","benevolent","friendly","loving"]},
+  {word:"METICULOUS",syns:["careful","precise","thorough","painstaking"],ants:["careless","negligent","sloppy","hasty"]},
+  {word:"OBDURATE",syns:["stubborn","unyielding","inflexible","obstinate"],ants:["flexible","yielding","amenable","compliant"]},
+  {word:"OPULENT",syns:["wealthy","rich","luxurious","affluent"],ants:["poor","destitute","impoverished","needy"]},
+  {word:"PRUDENT",syns:["wise","careful","cautious","sensible"],ants:["reckless","careless","imprudent","foolish"]},
+  {word:"RANCOUR",syns:["bitterness","spite","malice","hatred"],ants:["goodwill","kindness","amity","friendliness"]},
+  {word:"SHREWD",syns:["clever","astute","cunning","crafty"],ants:["simple","naive","innocent","foolish"]},
+  {word:"TIMID",syns:["shy","fearful","cowardly","nervous"],ants:["bold","brave","confident","courageous"]},
+  {word:"VERBOSE",syns:["wordy","long-winded","garrulous","loquacious"],ants:["brief","concise","terse","laconic"]},
+  {word:"WRATH",syns:["anger","fury","rage","indignation"],ants:["calm","peace","pleasure","happiness"]},
+  {word:"ZEAL",syns:["enthusiasm","fervour","passion","eagerness"],ants:["apathy","indifference","laziness","lethargy"]},
+];
+const DEFAULT_OWS = [
+  {word:"Agnostic",meaning:"one who is not sure about God's existence"},
+  {word:"Altruist",meaning:"a lover of mankind"},
+  {word:"Amateur",meaning:"one who does a thing for pleasure and not as a profession"},
+  {word:"Ambidexterous",meaning:"one who can use either hand with ease"},
+  {word:"Anarchist",meaning:"one who is out to destroy all governments, peace and order"},
+  {word:"Apostate",meaning:"a person who has changed his faith"},
+  {word:"Arbitrator",meaning:"a person appointed by two parties to solve a dispute"},
+  {word:"Ascetic",meaning:"one who leads an austere life"},
+  {word:"Atheist",meaning:"a person who does not believe in God"},
+  {word:"Bankrupt",meaning:"one who is unable to pay his debts"},
+  {word:"Bigot",meaning:"one who is filled with excessive enthusiasm in religious matters"},
+  {word:"Bohemian",meaning:"one who leads an unconventional style of living"},
+  {word:"Cacographist",meaning:"one who is bad in spellings"},
+  {word:"Cannibal",meaning:"one who feeds on human flesh"},
+  {word:"Carnivorous",meaning:"one who feeds on flesh"},
+  {word:"Chauvinist",meaning:"a person who is blindly devoted to an idea"},
+  {word:"Connoisseur",meaning:"a critical judge of any art and craft"},
+  {word:"Contemporaries",meaning:"persons living at the same time"},
+  {word:"Convalescent",meaning:"one who is recovering health after illness"},
+  {word:"Coquette",meaning:"a girl or woman who flirts with men"},
+  {word:"Cosmopolitan",meaning:"a person who regards the whole world as his country"},
+  {word:"Cynosure",meaning:"one who is a centre of attraction"},
+  {word:"Cynic",meaning:"one who sneers at the beliefs of others"},
+  {word:"Debonair",meaning:"a polished and light-hearted person"},
+  {word:"Demagogue",meaning:"a leader who sways his followers by his oratory"},
+  {word:"Dilettante",meaning:"a dabbler in art, science and literature"},
+  {word:"Effeminate",meaning:"a man who is womanish in his habits"},
+  {word:"Egoist",meaning:"a lover of oneself and one's advancement"},
+  {word:"Epicure",meaning:"one who is fond of pleasure of eating and drinking"},
+  {word:"Fastidious",meaning:"one who is very selective in his habits"},
+  {word:"Fatalist",meaning:"one who believes in fate"},
+  {word:"Feminist",meaning:"one who works for the welfare of women"},
+  {word:"Fugitive",meaning:"one who runs away from justice"},
+  {word:"Gourmand",meaning:"a lover of good food"},
+  {word:"Gourmet",meaning:"a connoisseur of food"},
+  {word:"Henpecked",meaning:"a husband ruled by his wife"},
+  {word:"Hedonist",meaning:"one who believes that sensual pleasure is the chief good"},
+  {word:"Heretic",meaning:"one who acts against religion"},
+  {word:"Herbivorous",meaning:"one that lives on herbs and plants"},
+  {word:"Honorary",meaning:"one who holds a post without any salary"},
+  {word:"Hypochondriac",meaning:"one who is over anxious about his health"},
+  {word:"Iconoclast",meaning:"one who is a breaker of images and traditions"},
+  {word:"Illiterate",meaning:"one who does not know reading or writing"},
+  {word:"Immigrant",meaning:"a person who comes to a country from his own country for settling"},
+  {word:"Impregnable",meaning:"that which cannot be entered by force"},
+  {word:"Insolvent",meaning:"one who is unable to pay his debts"},
+  {word:"Introvert",meaning:"one who turns his thoughts inwards"},
+  {word:"Misanthrope",meaning:"one who hates mankind"},
+  {word:"Misogynist",meaning:"one who hates women"},
+  {word:"Narcissist",meaning:"one who is excessively self-admiring"},
+  {word:"Nemesis",meaning:"one who is an agent of downfall or punishment"},
+  {word:"Novice",meaning:"one who is new to a field or activity"},
+  {word:"Omnivorous",meaning:"one who eats both plants and animals"},
+  {word:"Optimist",meaning:"one who looks on the bright side of things"},
+  {word:"Orphan",meaning:"a child whose parents are dead"},
+  {word:"Pacifist",meaning:"one who hates war and loves peace"},
+  {word:"Pessimist",meaning:"one who looks on the dark side of things"},
+  {word:"Philanthropist",meaning:"a lover of mankind who does good to others"},
+  {word:"Plagiarist",meaning:"one who copies from other writers"},
+  {word:"Polygamist",meaning:"one who has more than one spouse at a time"},
+  {word:"Posthumous",meaning:"that which is published after the death of the author"},
+  {word:"Pseudonym",meaning:"a fictitious name used by an author"},
+  {word:"Somnambulism",meaning:"the act of walking in sleep"},
+  {word:"Stoic",meaning:"one who is indifferent to pleasure or pain"},
+  {word:"Teetotaller",meaning:"one who does not drink alcohol at all"},
+  {word:"Verbose",meaning:"one who uses too many words"},
+  {word:"Veteran",meaning:"one who has long experience in a field"},
+  {word:"Widow",meaning:"a woman whose husband is dead"},
+  {word:"Xenophobia",meaning:"an excessive fear of strangers or foreigners"},
+];
+const DEFAULT_IDIOMS = [
+  {phrase:"A blessing in disguise",meaning:"something that seems bad but turns out to be good"},
+  {phrase:"Beat around the bush",meaning:"to avoid talking about the main topic"},
+  {phrase:"Bite the bullet",meaning:"to endure a painful situation bravely"},
+  {phrase:"Break a leg",meaning:"a way of wishing someone good luck"},
+  {phrase:"Burn the midnight oil",meaning:"to work late into the night"},
+  {phrase:"Cost an arm and a leg",meaning:"to be very expensive"},
+  {phrase:"Cutting corners",meaning:"doing something the easy way, sacrificing quality"},
+  {phrase:"Hit the nail on the head",meaning:"to describe exactly what is causing a situation or problem"},
+  {phrase:"Kill two birds with one stone",meaning:"to accomplish two things with a single action"},
+  {phrase:"Let the cat out of the bag",meaning:"to reveal a secret accidentally"},
+  {phrase:"Once in a blue moon",meaning:"something that happens very rarely"},
+  {phrase:"Spill the beans",meaning:"to reveal secret information"},
+  {phrase:"The best of both worlds",meaning:"to enjoy two different opportunities at the same time"},
+  {phrase:"Under the weather",meaning:"feeling ill or unwell"},
+  {phrase:"Add fuel to the fire",meaning:"to make a bad situation worse"},
+  {phrase:"At the drop of a hat",meaning:"immediately, without any hesitation"},
+  {phrase:"Barking up the wrong tree",meaning:"to pursue a mistaken or misguided course of action"},
+  {phrase:"Bite off more than you can chew",meaning:"to take on more responsibility than you can handle"},
+  {phrase:"Blow hot and cold",meaning:"to keep changing one's opinion or attitude"},
+  {phrase:"Carry the day",meaning:"to win or succeed"},
+];
+const DEFAULT_PHRASAL = [
+  {verb:"Break down",meaning:"to stop functioning; to lose emotional control"},
+  {verb:"Break out",meaning:"to escape; to start suddenly"},
+  {verb:"Bring about",meaning:"to cause something to happen"},
+  {verb:"Call off",meaning:"to cancel something"},
+  {verb:"Carry on",meaning:"to continue doing something"},
+  {verb:"Come across",meaning:"to find or meet by chance"},
+  {verb:"Cut down",meaning:"to reduce the amount of something"},
+  {verb:"Die out",meaning:"to become extinct or disappear"},
+  {verb:"Fall back on",meaning:"to use something when other options have failed"},
+  {verb:"Get away with",meaning:"to escape punishment for something wrong"},
+  {verb:"Give up",meaning:"to stop doing something; to surrender"},
+  {verb:"Hold on",meaning:"to wait; to keep firmly"},
+  {verb:"Look into",meaning:"to investigate or examine"},
+  {verb:"Make up",meaning:"to invent; to reconcile after a quarrel"},
+  {verb:"Pass away",meaning:"to die"},
+  {verb:"Put off",meaning:"to postpone or delay"},
+  {verb:"Run out of",meaning:"to have no more of something left"},
+  {verb:"Set up",meaning:"to establish or start something"},
+  {verb:"Take after",meaning:"to resemble a parent or relative"},
+  {verb:"Turn down",meaning:"to refuse or reject"},
+];
+const DEFAULT_FOREIGN = [
+  {word:"Ad hoc",meaning:"for a specific purpose; improvised"},
+  {word:"Bona fide",meaning:"genuine; in good faith"},
+  {word:"Carte blanche",meaning:"complete freedom to act as one wishes"},
+  {word:"De facto",meaning:"in fact, whether by right or not"},
+  {word:"En masse",meaning:"all together; as a group"},
+  {word:"Fait accompli",meaning:"a thing already done and past arguing against"},
+  {word:"Faux pas",meaning:"a social blunder or embarrassing mistake"},
+  {word:"In situ",meaning:"in the original or natural position"},
+  {word:"Modus operandi",meaning:"a particular way of doing something"},
+  {word:"Per se",meaning:"by itself; intrinsically"},
+  {word:"Post mortem",meaning:"an examination after death; analysis after an event"},
+  {word:"Prima facie",meaning:"based on first impression; accepted until proved otherwise"},
+  {word:"Pro rata",meaning:"proportional; in proportion"},
+  {word:"Status quo",meaning:"the existing state of affairs"},
+  {word:"Verbatim",meaning:"in exactly the same words; word for word"},
+  {word:"Vice versa",meaning:"with the main terms in reverse order"},
+  {word:"Alma mater",meaning:"the school or university one formerly attended"},
+  {word:"Alter ego",meaning:"a person's secondary self"},
+  {word:"Carpe diem",meaning:"seize the day; make the most of the present"},
+  {word:"Persona non grata",meaning:"an unwelcome or unacceptable person"},
+];
+
+// ══════════════════════════════════════════════════════════════
+// STATE & STORAGE
+// ══════════════════════════════════════════════════════════════
+let db = {
+  synonyms: JSON.parse(localStorage.getItem('vf_synonyms') || 'null') || [...DEFAULT_SYNONYMS],
+  ows:      JSON.parse(localStorage.getItem('vf_ows')      || 'null') || [...DEFAULT_OWS],
+  idioms:   JSON.parse(localStorage.getItem('vf_idioms')   || 'null') || [...DEFAULT_IDIOMS],
+  phrasal:  JSON.parse(localStorage.getItem('vf_phrasal')  || 'null') || [...DEFAULT_PHRASAL],
+  foreign:  JSON.parse(localStorage.getItem('vf_foreign')  || 'null') || [...DEFAULT_FOREIGN],
+};
+function saveDb(){ Object.keys(db).forEach(k=>localStorage.setItem('vf_'+k,JSON.stringify(db[k]))); }
+
+// ── SPACED REPETITION
+// SR record: { stage:0-4, nextDue:"YYYY-MM-DD", addedOn:"YYYY-MM-DD" }
+// Stage intervals (days from last review):  0→1, 1→3, 2→7, 3→20, 4=MASTERED
+const SR_INTERVALS = [1, 3, 7, 20];
+const SR_STAGE_LABELS = ['New','Day 3','Day 7','Day 20','Mastered'];
+const SR_STAGE_COLORS = ['#8b89a8','#60a5fa','#a78bfa','#fb923c','#f4b942'];
+
+let srData = JSON.parse(localStorage.getItem('vf_sr') || '{}');
+function saveSR(){ localStorage.setItem('vf_sr', JSON.stringify(srData)); }
+
+function srKey(wordId, cat){ return wordId.toLowerCase().trim() + '|||' + cat; }
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+function addDays(dateStr, n){
+  const d = new Date(dateStr); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10);
+}
+
+// Ensure every word in db has an SR record (called on init and after adding words)
+function initSRForAllWords(){
+  const today = todayStr();
+  const keyMap = {synonyms:'word',ows:'word',idioms:'phrase',phrasal:'verb',foreign:'word'};
+  let changed = false;
+  for(const [cat, entries] of Object.entries(db)){
+    const wk = keyMap[cat];
+    for(const e of entries){
+      const k = srKey(e[wk], cat);
+      if(!srData[k]){
+        srData[k] = {stage:0, nextDue:today, addedOn:today};
+        changed = true;
+      }
+    }
+  }
+  if(changed) saveSR();
+}
+
+// Get all words due today or overdue (stage < 4)
+function getDueWords(){
+  const today = todayStr();
+  const due = {synonyms:[],ows:[],idioms:[],phrasal:[],foreign:[]};
+  const keyMap = {synonyms:'word',ows:'word',idioms:'phrase',phrasal:'verb',foreign:'word'};
+  for(const [cat, entries] of Object.entries(db)){
+    const wk = keyMap[cat];
+    for(const e of entries){
+      const k = srKey(e[wk], cat);
+      const rec = srData[k];
+      if(rec && rec.stage < 4 && rec.nextDue <= today){
+        due[cat].push({entry:e, srKey:k, rec});
+      }
+    }
+  }
+  return due;
+}
+
+function getTotalDue(){
+  const d = getDueWords();
+  return Object.values(d).reduce((s,a)=>s+a.length,0);
+}
+
+function getSRCounts(){
+  // Returns {synonyms:{0:n,1:n,2:n,3:n,4:n}, ...}
+  const counts = {};
+  for(const cat of Object.keys(db)){
+    counts[cat] = {0:0,1:0,2:0,3:0,4:0};
+  }
+  const keyMap = {synonyms:'word',ows:'word',idioms:'phrase',phrasal:'verb',foreign:'word'};
+  for(const [cat, entries] of Object.entries(db)){
+    const wk = keyMap[cat];
+    for(const e of entries){
+      const k = srKey(e[wk], cat);
+      const rec = srData[k];
+      const stage = rec ? rec.stage : 0;
+      counts[cat][stage]++;
+    }
+  }
+  return counts;
+}
+
+// Advance or reset SR on answer
+function updateSR(key, correct){
+  const rec = srData[key];
+  if(!rec) return;
+  const today = todayStr();
+  if(correct){
+    if(rec.stage < 4){
+      rec.stage++;
+      rec.nextDue = rec.stage < 4 ? addDays(today, SR_INTERVALS[rec.stage-1]) : today;
+    }
+  } else {
+    rec.stage = 0;
+    rec.nextDue = addDays(today, 1); // retry tomorrow
+  }
+  saveSR();
+}
+
+// ── ACTIVITY LOG
+let activityLog = JSON.parse(localStorage.getItem('vf_activity') || '[]');
+function recordActivity(){
+  const today = todayStr();
+  if(!activityLog.includes(today)){ activityLog.push(today); localStorage.setItem('vf_activity',JSON.stringify(activityLog)); }
+}
+
+// ── QUIZ STATE
+let selectedMode = 'mixed';
+let timerEnabled = false;
+let quizIsReview = false; // true = SR review session
+let questions = [], currentQ = 0, score = 0, streak = 0, maxStreak = 0, results = [];
+let selectedAnswer = null, timerInterval = null, timerSecs = 20;
+let srAdvanced = 0, srMastered = 0; // for result summary
+
+let activeTab = 'synonyms', deleteConfirmIdx = null;
+
+const MODES = [
+  {value:'mixed',label:'Mixed',icon:'⚡'},
+  {value:'synonym',label:'Synonym',icon:'≈'},
+  {value:'antonym',label:'Antonym',icon:'↔'},
+  {value:'ows',label:'One Word',icon:'◈'},
+  {value:'idiom',label:'Idioms',icon:'💬'},
+  {value:'phrasal',label:'Phrasal',icon:'🔗'},
+  {value:'foreign',label:'Foreign',icon:'🌐'},
+];
+const TYPE_COLOR = {SYNONYM:'#60a5fa',ANTONYM:'#f472b6','ONE WORD':'#a78bfa',MEANING:'#34d399',IDIOM:'#fb923c',PHRASAL:'#e879f9',FOREIGN:'#38bdf8'};
+const CAT_META = [
+  {key:'synonyms',label:'Synonyms & Antonyms',icon:'≈',color:'#60a5fa',fields:['word','syns','ants'],ph:{word:'e.g. BRAVE',syns:'e.g. courageous, bold, valiant',ants:'e.g. cowardly, timid, fearful'},hint:'Separate synonyms/antonyms with commas'},
+  {key:'ows',label:'One Word Substitutions',icon:'◈',color:'#a78bfa',fields:['word','meaning'],ph:{word:'e.g. Altruist',meaning:'e.g. a lover of mankind'},hint:'Word and its one-line definition'},
+  {key:'idioms',label:'Idioms & Phrases',icon:'💬',color:'#fb923c',fields:['phrase','meaning'],ph:{phrase:'e.g. Beat around the bush',meaning:'e.g. to avoid the main topic'},hint:'The idiom and what it means'},
+  {key:'phrasal',label:'Phrasal Verbs',icon:'🔗',color:'#e879f9',fields:['verb','meaning'],ph:{verb:'e.g. Give up',meaning:'e.g. to stop doing something'},hint:'The phrasal verb and its meaning'},
+  {key:'foreign',label:'Foreign Words',icon:'🌐',color:'#38bdf8',fields:['word','meaning'],ph:{word:'e.g. Bona fide',meaning:'e.g. genuine; in good faith'},hint:'Foreign word and its English meaning'},
+];
+const FIELD_LABELS = {word:'Word/Phrase',syns:'Synonyms (comma separated)',ants:'Antonyms (comma separated)',meaning:'Meaning',phrase:'Idiom/Phrase',verb:'Phrasal Verb'};
+
+// ══════════════════════════════════════════════════════════════
+// SCREEN MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='home') renderHome();
+  if(id==='manager') renderManager();
+}
+function exitQuiz(){
+  clearInterval(timerInterval);
+  showScreen('home');
+}
+
+// ══════════════════════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════════════════════
+function renderHome(){
+  initSRForAllWords();
+  const total = Object.values(db).reduce((s,a)=>s+a.length,0);
+  const srC = getSRCounts();
+  const totalMastered = Object.values(srC).reduce((s,o)=>s+(o[4]||0),0);
+  const dueCount = getTotalDue();
+
+  document.getElementById('total-count').textContent = total+' words · 5 categories';
+  document.getElementById('mastery-summary').innerHTML =
+    '<span style="color:#f4b942;font-weight:700;">'+totalMastered+'</span>/'+total+' mastered ⭐';
+  document.getElementById('manager-count').textContent = total;
+
+  // TODAY'S REVIEW card
+  const rc = document.getElementById('review-card');
+  if(dueCount > 0){
+    rc.innerHTML = `
+      <div style="background:linear-gradient(135deg,rgba(244,185,66,.12),rgba(232,112,42,.08));border:1.5px solid rgba(244,185,66,.4);border-radius:12px;padding:1.1rem 1.2rem;animation:slideUp .3s ease;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem;">
+          <div>
+            <div style="font-size:.65rem;font-family:monospace;letter-spacing:.15em;color:#c8922a;text-transform:uppercase;margin-bottom:.2rem;">Spaced Repetition</div>
+            <div style="font-size:1rem;font-weight:800;">Today's Review</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:2rem;font-weight:900;color:#f4b942;line-height:1;">${dueCount}</div>
+            <div style="font-size:.62rem;color:#8b89a8;">words due</div>
+          </div>
+        </div>
+        <button class="btn-gold" onclick="startReview()" style="width:100%;box-shadow:0 4px 20px rgba(244,185,66,.25);">
+          📚 Start Review →
+        </button>
+      </div>`;
+  } else {
+    rc.innerHTML = `
+      <div style="background:#161428;border:1px solid #252340;border-radius:12px;padding:.9rem 1.2rem;text-align:center;">
+        <div style="font-size:1.3rem;margin-bottom:.25rem;">✅</div>
+        <div style="font-size:.88rem;font-weight:700;color:#4ade80;margin-bottom:.15rem;">All caught up!</div>
+        <div style="font-size:.72rem;color:#6b6984;">No reviews due today. Come back tomorrow.</div>
+      </div>`;
+  }
+
+  // Mode pills
+  document.getElementById('mode-grid').innerHTML = MODES.map(m=>`
+    <button class="mode-pill ${selectedMode===m.value?'active':''}" onclick="setMode('${m.value}')">
+      ${m.icon} ${m.label}
+    </button>`).join('');
+
+  // If stats panel is open, re-render it
+  if(statsOpen) renderStatsPanel();
+}
+
+function setMode(m){ selectedMode=m; renderHome(); }
+function toggleTimer(){
+  timerEnabled=!timerEnabled;
+  document.getElementById('timer-toggle').style.background=timerEnabled?'#f4b942':'#252340';
+  document.getElementById('timer-knob').style.left=timerEnabled?'23px':'3px';
+}
+document.getElementById('count-range').addEventListener('input',function(){ document.getElementById('count-display').textContent=this.value; });
+
+// ══════════════════════════════════════════════════════════════
+// QUESTION BUILDERS  (each returns question obj with wordId, cat, srKey)
+// ══════════════════════════════════════════════════════════════
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function makeSynQ(e,sk){ const c=e.syns[Math.floor(Math.random()*e.syns.length)]; const d=shuffle(db.synonyms.filter(x=>x.word!==e.word).flatMap(x=>x.syns).filter(w=>w!==c)).slice(0,3); if(d.length<3)return null; return {type:'SYNONYM',question:'Choose the SYNONYM of: **'+e.word+'**',options:shuffle([c,...d]),answer:c,explanation:'"'+e.word+'" means similar to: '+e.syns.join(', ')+'.',wordId:e.word,cat:'synonyms',srKey:sk}; }
+function makeAntQ(e,sk){ const c=e.ants[Math.floor(Math.random()*e.ants.length)]; const d=shuffle(db.synonyms.filter(x=>x.word!==e.word).flatMap(x=>x.ants).filter(w=>w!==c)).slice(0,3); if(d.length<3)return null; return {type:'ANTONYM',question:'Choose the ANTONYM of: **'+e.word+'**',options:shuffle([c,...d]),answer:c,explanation:'The opposite of "'+e.word+'" is: '+e.ants.join(', ')+'.',wordId:e.word,cat:'synonyms',srKey:sk}; }
+function makeOwsQ(e,sk){ const d=shuffle(db.ows.filter(x=>x.word!==e.word)).slice(0,3).map(x=>x.word); if(d.length<3)return null; return {type:'ONE WORD',question:'Find the ONE WORD for:\n"'+e.meaning+'"',options:shuffle([e.word,...d]),answer:e.word,explanation:'"'+e.word+'" means: '+e.meaning+'.',wordId:e.word,cat:'ows',srKey:sk}; }
+function makeMeanQ(e,sk){ const d=shuffle(db.ows.filter(x=>x.word!==e.word)).slice(0,3).map(x=>x.meaning); if(d.length<3)return null; return {type:'MEANING',question:'What does **'+e.word+'** mean?',options:shuffle([e.meaning,...d]),answer:e.meaning,explanation:'"'+e.word+'" means: '+e.meaning+'.',wordId:e.word,cat:'ows',srKey:sk}; }
+function makeIdiomQ(e,sk){ const d=shuffle(db.idioms.filter(x=>x.phrase!==e.phrase)).slice(0,3).map(x=>x.meaning); if(d.length<3)return null; return {type:'IDIOM',question:'What does the idiom **"'+e.phrase+'"** mean?',options:shuffle([e.meaning,...d]),answer:e.meaning,explanation:'"'+e.phrase+'" means: '+e.meaning+'.',wordId:e.phrase,cat:'idioms',srKey:sk}; }
+function makePhrasalQ(e,sk){ const d=shuffle(db.phrasal.filter(x=>x.verb!==e.verb)).slice(0,3).map(x=>x.meaning); if(d.length<3)return null; return {type:'PHRASAL',question:'What does **"'+e.verb+'"** mean?',options:shuffle([e.meaning,...d]),answer:e.meaning,explanation:'"'+e.verb+'" means: '+e.meaning+'.',wordId:e.verb,cat:'phrasal',srKey:sk}; }
+function makeForeignQ(e,sk){ const d=shuffle(db.foreign.filter(x=>x.word!==e.word)).slice(0,3).map(x=>x.meaning); if(d.length<3)return null; return {type:'FOREIGN',question:'What does **"'+e.word+'"** mean?',options:shuffle([e.meaning,...d]),answer:e.meaning,explanation:'"'+e.word+'" means: '+e.meaning+'.',wordId:e.word,cat:'foreign',srKey:sk}; }
+
+function entryToQ(entry, cat, sk){
+  const fns = {
+    synonyms: [e=>makeSynQ(e,sk), e=>makeAntQ(e,sk)],
+    ows:      [e=>makeOwsQ(e,sk), e=>makeMeanQ(e,sk)],
+    idioms:   [e=>makeIdiomQ(e,sk)],
+    phrasal:  [e=>makePhrasalQ(e,sk)],
+    foreign:  [e=>makeForeignQ(e,sk)],
+  };
+  const makers = fns[cat] || [];
+  for(const fn of shuffle(makers)){
+    const q = fn(entry); if(q) return q;
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════════════════════
+// REVIEW SESSION (spaced repetition)
+// ══════════════════════════════════════════════════════════════
+function startReview(){
+  markFirstSession();
+  const due = getDueWords();
+  const qs = [];
+  for(const [cat, items] of Object.entries(due)){
+    for(const {entry, srKey:sk, rec} of shuffle(items)){
+      const q = entryToQ(entry, cat, sk);
+      if(q){ q.srStage = rec.stage; qs.push(q); }
+    }
+  }
+  if(qs.length===0){ alert('Nothing to review right now!'); return; }
+  quizIsReview = true;
+  srAdvanced = 0; srMastered = 0;
+  launchQuiz(shuffle(qs));
+}
+
+// ══════════════════════════════════════════════════════════════
+// FREE QUIZ
+// ══════════════════════════════════════════════════════════════
+function startFreeQuiz(){
+  markFirstSession();
+  const count = parseInt(document.getElementById('count-range').value);
+  const qs = generateFreeQuestions(selectedMode, count);
+  if(qs.length===0){ alert('Not enough words in this category. Please add more in Word Manager.'); return; }
+  quizIsReview = false;
+  srAdvanced = 0; srMastered = 0;
+  launchQuiz(qs);
+}
+
+function generateFreeQuestions(mode, count){
+  const keyMap = {synonyms:'word',ows:'word',idioms:'phrase',phrasal:'verb',foreign:'word'};
+  const pools={synonym:shuffle(db.synonyms),antonym:shuffle(db.synonyms),ows:shuffle(db.ows),meaning:shuffle(db.ows),idiom:shuffle(db.idioms),phrasal:shuffle(db.phrasal),foreign:shuffle(db.foreign)};
+  const idx={synonym:0,antonym:0,ows:0,meaning:0,idiom:0,phrasal:0,foreign:0};
+  const modeMap={mixed:['synonym','antonym','ows','meaning','idiom','phrasal','foreign'],synonym:['synonym'],antonym:['antonym'],ows:['ows','meaning'],idiom:['idiom'],phrasal:['phrasal'],foreign:['foreign']};
+  const catMap={synonym:'synonyms',antonym:'synonyms',ows:'ows',meaning:'ows',idiom:'idioms',phrasal:'phrasal',foreign:'foreign'};
+  const pool=modeMap[mode]||modeMap.mixed;
+  const qs=[]; let attempts=0;
+  while(qs.length<count&&attempts<count*8){
+    attempts++;
+    const type=pool[Math.floor(Math.random()*pool.length)];
+    const i=idx[type]; if(i>=pools[type].length) continue;
+    idx[type]++;
+    const e=pools[type][i];
+    const cat=catMap[type];
+    const wk=keyMap[cat];
+    const sk=srKey(e[wk],cat);
+    let q=null;
+    if(type==='synonym') q=makeSynQ(e,sk);
+    else if(type==='antonym') q=makeAntQ(e,sk);
+    else if(type==='ows') q=makeOwsQ(e,sk);
+    else if(type==='meaning') q=makeMeanQ(e,sk);
+    else if(type==='idiom') q=makeIdiomQ(e,sk);
+    else if(type==='phrasal') q=makePhrasalQ(e,sk);
+    else if(type==='foreign') q=makeForeignQ(e,sk);
+    if(q) qs.push(q);
+  }
+  return qs;
+}
+
+function launchQuiz(qs){
+  questions=qs; currentQ=0; score=0; streak=0; maxStreak=0; results=[];
+  selectedAnswer=null;
+  recordActivity();
+  showScreen('quiz');
+  document.getElementById('quiz-mode-label').textContent = quizIsReview ? '📚 SR REVIEW' : '⚡ FREE PRACTICE';
+  renderQuestion();
+}
+
+// ══════════════════════════════════════════════════════════════
+// QUIZ ENGINE
+// ══════════════════════════════════════════════════════════════
+function renderQuestion(){
+  selectedAnswer=null;
+  clearInterval(timerInterval);
+  const q=questions[currentQ];
+  const total=questions.length;
+  document.getElementById('progress-bar').style.width=((currentQ)/total*100)+'%';
+  document.getElementById('score-display').textContent=score+'/'+(currentQ);
+  document.getElementById('qnum-display').textContent=(currentQ+1)+'/'+total;
+  if(streak>=2){document.getElementById('streak-display').textContent='🔥'+streak;document.getElementById('streak-display').style.display='';}
+  else document.getElementById('streak-display').style.display='none';
+
+  const tColor=TYPE_COLOR[q.type]||'#f4b942';
+  const badge=document.getElementById('type-badge');
+  badge.textContent=q.type; badge.style.background=tColor+'22'; badge.style.border='1px solid '+tColor+'55'; badge.style.color=tColor;
+
+  // SR stage hint in review mode
+  const hint = document.getElementById('sr-stage-hint');
+  if(quizIsReview && q.srStage!==undefined){
+    hint.style.display='';
+    hint.innerHTML = SR_STAGE_LABELS.map((l,i)=>`<span style="color:${i===q.srStage?SR_STAGE_COLORS[i]:'#2e2c4a'};font-weight:${i===q.srStage?700:400};">${l}</span>`).join(' → ');
+  } else {
+    hint.style.display='none';
+  }
+
+  document.getElementById('question-text').innerHTML=q.question.replace(/\*\*(.+?)\*\*/g,'<span style="color:#f4b942;font-weight:800;">$1</span>');
+
+  const letters=['A','B','C','D'];
+  document.getElementById('options-container').innerHTML=q.options.map((opt,i)=>`
+    <button class="opt-btn" onclick="selectAnswer('${opt.replace(/'/g,"\\'")}',this)" id="opt-${i}">
+      <span style="width:24px;height:24px;border-radius:50%;border:1.5px solid #2e2c4a;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:.7rem;flex-shrink:0;color:#8b89a8;">${letters[i]}</span>
+      <span>${opt}</span>
+    </button>`).join('');
+
+  document.getElementById('explanation-box').style.display='none';
+  document.getElementById('timeout-notice').style.display='none';
+  document.getElementById('sr-feedback').style.display='none';
+  document.getElementById('next-btn').style.display='none';
+
+  if(timerEnabled){
+    timerSecs=20;
+    document.getElementById('timer-bar-wrap').style.display='';
+    document.getElementById('timer-bar').style.width='100%';
+    document.getElementById('timer-bar').style.background='#4ade80';
+    document.getElementById('timer-countdown').style.display='';
+    document.getElementById('timer-countdown').textContent='20s';
+    timerInterval=setInterval(()=>{
+      timerSecs--;
+      const pct=(timerSecs/20)*100;
+      document.getElementById('timer-bar').style.width=pct+'%';
+      document.getElementById('timer-bar').style.background=timerSecs>10?'#4ade80':timerSecs>5?'#facc15':'#f87171';
+      document.getElementById('timer-countdown').textContent=timerSecs+'s';
+      document.getElementById('timer-countdown').style.color=timerSecs<=5?'#f87171':'#8b89a8';
+      if(timerSecs<=0){clearInterval(timerInterval);handleTimeout();}
+    },1000);
+  } else {
+    document.getElementById('timer-bar-wrap').style.display='none';
+    document.getElementById('timer-countdown').style.display='none';
+  }
+}
+
+function selectAnswer(answer,btn){
+  if(selectedAnswer) return;
+  clearInterval(timerInterval);
+  selectedAnswer=answer;
+  const q=questions[currentQ];
+  const correct=answer===q.answer;
+  if(correct){score++;streak++;maxStreak=Math.max(maxStreak,streak);}
+  else streak=0;
+  results.push({correct,word:q.question,answer:q.answer,chosen:answer,srKey:q.srKey,srStage:q.srStage});
+
+  // Update SR
+  if(q.srKey){
+    const prevStage = srData[q.srKey] ? srData[q.srKey].stage : 0;
+    updateSR(q.srKey, correct);
+    const newStage = srData[q.srKey] ? srData[q.srKey].stage : 0;
+    if(correct && newStage > prevStage){
+      srAdvanced++;
+      if(newStage===4) srMastered++;
+      // Show SR advancement feedback
+      if(quizIsReview){
+        const fb = document.getElementById('sr-feedback');
+        if(newStage===4){
+          fb.style.cssText='display:block;background:rgba(244,185,66,.12);border:1px solid rgba(244,185,66,.4);color:#f4b942;border-radius:6px;padding:.55rem 1rem;font-size:.8rem;margin-bottom:.5rem;animation:slideUp .2s ease;';
+          fb.textContent='⭐ MASTERED! This word is now in long-term memory.';
+        } else {
+          fb.style.cssText='display:block;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3);color:#4ade80;border-radius:6px;padding:.55rem 1rem;font-size:.8rem;margin-bottom:.5rem;animation:slideUp .2s ease;';
+          fb.textContent='✓ Advanced to '+SR_STAGE_LABELS[newStage]+' — next review in '+SR_INTERVALS[newStage-1]+' day'+(SR_INTERVALS[newStage-1]>1?'s':'');
+        }
+      }
+    } else if(!correct && quizIsReview){
+      const fb = document.getElementById('sr-feedback');
+      fb.style.cssText='display:block;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#f87171;border-radius:6px;padding:.55rem 1rem;font-size:.8rem;margin-bottom:.5rem;animation:slideUp .2s ease;';
+      fb.textContent='✗ Reset to start — review again tomorrow';
+    }
+  }
+
+  document.querySelectorAll('.opt-btn').forEach(b=>{
+    b.disabled=true;
+    const bText=b.querySelector('span:last-child').textContent;
+    const circle=b.querySelector('span:first-child');
+    if(bText===q.answer){b.classList.add('correct');circle.style.borderColor='#4ade80';circle.style.color='#4ade80';}
+    else if(bText===answer&&!correct){b.classList.add('wrong');circle.style.borderColor='#f87171';circle.style.color='#f87171';}
+  });
+
+  document.getElementById('explanation-box').textContent=q.explanation;
+  document.getElementById('explanation-box').style.display='';
+
+  const nb=document.getElementById('next-btn');
+  nb.style.display='';
+  nb.textContent=currentQ+1<questions.length?'Next →':'See Results →';
+  if(correct){nb.style.background='rgba(74,222,128,.15)';nb.style.border='1.5px solid #4ade80';nb.style.color='#4ade80';}
+  else{nb.style.background='rgba(248,113,113,.12)';nb.style.border='1.5px solid #f87171';nb.style.color='#f87171';}
+}
+
+function handleTimeout(){
+  selectedAnswer='__timeout__';
+  const q=questions[currentQ];
+  results.push({correct:false,word:q.question,answer:q.answer,chosen:'__timeout__',srKey:q.srKey});
+  streak=0;
+  if(q.srKey) updateSR(q.srKey, false);
+  document.querySelectorAll('.opt-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.querySelector('span:last-child').textContent===q.answer) b.classList.add('correct');
+  });
+  document.getElementById('timeout-notice').textContent="⏰ Time's up! Correct: "+q.answer;
+  document.getElementById('timeout-notice').style.display='';
+  if(quizIsReview){
+    const fb=document.getElementById('sr-feedback');
+    fb.style.cssText='display:block;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);color:#f87171;border-radius:6px;padding:.55rem 1rem;font-size:.8rem;margin-bottom:.5rem;';
+    fb.textContent='✗ Timed out — reset to start, review again tomorrow';
+  }
+  const nb=document.getElementById('next-btn');
+  nb.style.display='';nb.textContent=currentQ+1<questions.length?'Next →':'See Results →';
+  nb.style.background='rgba(248,113,113,.12)';nb.style.border='1.5px solid #f87171';nb.style.color='#f87171';
+}
+
+function nextQuestion(){
+  currentQ++;
+  if(currentQ>=questions.length) showResult();
+  else renderQuestion();
+}
+
+// ══════════════════════════════════════════════════════════════
+// RESULT
+// ══════════════════════════════════════════════════════════════
+function showResult(){
+  clearInterval(timerInterval);
+  showScreen('result');
+  const pct=Math.round((score/questions.length)*100);
+  const grades=[{min:90,label:'Outstanding',color:'#fbbf24',icon:'🏆'},{min:75,label:'Excellent',color:'#4ade80',icon:'⭐'},{min:60,label:'Good',color:'#60a5fa',icon:'👍'},{min:40,label:'Average',color:'#f472b6',icon:'📖'},{min:0,label:'Needs Work',color:'#f87171',icon:'💪'}];
+  const g=grades.find(x=>pct>=x.min);
+  document.getElementById('result-icon').textContent=g.icon;
+  document.getElementById('result-label').style.color=g.color;
+  document.getElementById('result-label').textContent=g.label;
+  document.getElementById('result-score').innerHTML=score+'<span style="font-size:1.4rem;color:#8b89a8;">/'+questions.length+'</span>';
+  document.getElementById('result-pct').textContent=pct+'% correct';
+
+  document.getElementById('result-stats').innerHTML=[
+    {label:'Score',val:score+'/'+questions.length},
+    {label:'Best Streak',val:'🔥'+maxStreak},
+    {label:'Accuracy',val:pct+'%'},
+  ].map(s=>`<div style="background:#211f36;border:1px solid #2e2c4a;border-radius:8px;padding:.75rem;text-align:center;">
+    <div style="font-size:1.15rem;font-weight:800;color:#f4b942;">${s.val}</div>
+    <div style="font-size:.65rem;color:#8b89a8;font-family:monospace;">${s.label}</div>
+  </div>`).join('');
+
+  // SR summary block
+  const srEl = document.getElementById('result-sr-summary');
+  if(quizIsReview){
+    const remaining = getTotalDue();
+    srEl.innerHTML = `
+      <div style="background:#211f36;border:1px solid #2e2c4a;border-radius:10px;padding:.9rem 1rem;">
+        <div style="font-family:monospace;font-size:.62rem;letter-spacing:.15em;color:#c8922a;text-transform:uppercase;margin-bottom:.6rem;">Review Summary</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;text-align:center;">
+          <div><div style="font-size:1.1rem;font-weight:800;color:#4ade80;">${srAdvanced}</div><div style="font-size:.6rem;color:#8b89a8;font-family:monospace;">Advanced</div></div>
+          <div><div style="font-size:1.1rem;font-weight:800;color:#f4b942;">${srMastered}</div><div style="font-size:.6rem;color:#8b89a8;font-family:monospace;">Mastered</div></div>
+          <div><div style="font-size:1.1rem;font-weight:800;color:#f87171;">${remaining}</div><div style="font-size:.6rem;color:#8b89a8;font-family:monospace;">Still Due</div></div>
+        </div>
+        ${srMastered>0?`<div style="margin-top:.6rem;text-align:center;font-size:.8rem;color:#f4b942;font-weight:700;">⭐ ${srMastered} word${srMastered>1?'s':''} mastered today!</div>`:''}
+      </div>`;
+  } else {
+    // In free mode just show total mastery
+    const srC = getSRCounts();
+    const totalMastered = Object.values(srC).reduce((s,o)=>s+(o[4]||0),0);
+    const total = Object.values(db).reduce((s,a)=>s+a.length,0);
+    const pctM = total>0?Math.round((totalMastered/total)*100):0;
+    srEl.innerHTML = `
+      <div style="background:#211f36;border:1px solid #2e2c4a;border-radius:10px;padding:.85rem 1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;">
+          <span style="font-size:.8rem;font-weight:700;color:#f4b942;">⭐ Overall Mastery</span>
+          <span style="font-family:monospace;font-size:.72rem;color:#8b89a8;">${totalMastered}/${total}</span>
+        </div>
+        <div class="mastery-bar-track" style="height:7px;">
+          <div class="mastery-bar-fill" style="width:${pctM}%;background:linear-gradient(90deg,#f4b942,#e8702a);"></div>
+        </div>
+      </div>`;
+  }
+
+  const wrong=results.filter(r=>!r.correct);
+  const againBtn = document.getElementById('result-again-btn');
+  if(quizIsReview){
+    const remaining=getTotalDue();
+    if(remaining>0){
+      againBtn.textContent='Continue Review ('+remaining+' left) →';
+      againBtn.onclick=startReview;
+    } else {
+      againBtn.textContent='✅ All Done — Start Free Practice';
+      againBtn.onclick=startFreeQuiz;
+    }
+  } else {
+    againBtn.textContent='Play Again →';
+    againBtn.onclick=startFreeQuiz;
+  }
+
+  if(wrong.length>0){
+    document.getElementById('wrong-review').style.display='';
+    document.getElementById('wrong-list').innerHTML=wrong.map(r=>`
+      <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:.6rem .9rem;font-size:.82rem;">
+        <div style="color:#8b89a8;margin-bottom:.2rem;font-size:.75rem;">${r.word.replace(/\*\*/g,'')}</div>
+        <span style="color:#f87171;">✗ ${r.chosen==='__timeout__'?'Time up':r.chosen}</span>
+        <span style="color:#8b89a8;margin:0 .4rem;">→</span>
+        <span style="color:#4ade80;">✓ ${r.answer}</span>
+      </div>`).join('');
+  } else {
+    document.getElementById('wrong-review').style.display='none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MANAGER
+// ══════════════════════════════════════════════════════════════
+function renderManager(){
+  document.getElementById('mgr-count').textContent=db[activeTab].length+' entries';
+  document.getElementById('tab-bar').innerHTML=CAT_META.map(m=>`
+    <button class="tab-btn ${activeTab===m.key?'active':''}" onclick="switchTab('${m.key}')"
+      style="${activeTab===m.key?'background:'+m.color+'22;border-color:'+m.color+';color:'+m.color+';':''}">
+      ${m.icon} ${m.label.split(' ')[0]}
+    </button>`).join('');
+  renderAddForm(); renderList();
+}
+function switchTab(key){ activeTab=key; deleteConfirmIdx=null; bulkPasteOpen=false; document.getElementById('search-input').value=''; renderManager(); }
+
+function renderAddForm(){
+  const m=CAT_META.find(x=>x.key===activeTab);
+  document.getElementById('add-form-wrap').innerHTML=`
+    <div style="font-family:monospace;font-size:.65rem;letter-spacing:.2em;color:${m.color};text-transform:uppercase;margin-bottom:.6rem;">${m.icon} Add New — ${m.label}</div>
+    <div style="font-size:.72rem;color:#8b89a8;margin-bottom:.8rem;">${m.hint}</div>
+    ${m.fields.map(f=>`
+      <div style="margin-bottom:.65rem;">
+        <div style="font-family:monospace;font-size:.63rem;color:#8b89a8;margin-bottom:.3rem;text-transform:uppercase;">${FIELD_LABELS[f]||f}</div>
+        ${(f==='meaning'||f==='syns'||f==='ants')?
+          `<textarea class="inp" id="field-${f}" placeholder="${m.ph[f]||''}" rows="2"></textarea>`:
+          `<input class="inp" id="field-${f}" placeholder="${m.ph[f]||''}">`}
+      </div>`).join('')}
+    <div id="form-error" style="display:none;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);border-radius:5px;padding:.5rem .75rem;color:#f87171;font-size:.8rem;margin-bottom:.6rem;"></div>
+    <div id="form-success" style="display:none;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.4);border-radius:5px;padding:.5rem .75rem;color:#4ade80;font-size:.8rem;margin-bottom:.6rem;"></div>
+    <button onclick="handleAdd()" style="width:100%;padding:.7rem;background:linear-gradient(135deg,${m.color},${m.color}99);color:#0f0e17;border:none;border-radius:7px;font-weight:700;font-size:.9rem;cursor:pointer;">+ Add Entry</button>
+
+    <!-- ── BULK PASTE SECTION ── -->
+    <div style="margin-top:.9rem;border-top:1px solid #2e2c4a;padding-top:.85rem;">
+      <button id="bulk-toggle-btn" onclick="toggleBulkPane()" style="width:100%;padding:.6rem .8rem;background:#1a1830;border:1.5px solid #2e2c4a;border-radius:7px;color:#8b89a8;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .15s;" onmouseover="this.style.borderColor='#f4b942';this.style.color='#f4b942';" onmouseout="if(!bulkPasteOpen){this.style.borderColor='#2e2c4a';this.style.color='#8b89a8';}">
+        <span>📋 Bulk Paste</span>
+        <span style="font-family:monospace;font-size:.68rem;color:#8b89a8;">paste multiple at once</span>
+      </button>
+      <div id="bulk-pane" style="display:none;margin-top:.75rem;animation:slideUp .2s ease;">
+        <div style="background:#151325;border:1px solid #2e2c4a;border-radius:7px;padding:.75rem .85rem;margin-bottom:.65rem;">
+          <div style="font-family:monospace;font-size:.58rem;letter-spacing:.15em;color:#c8922a;text-transform:uppercase;margin-bottom:.4rem;">Format — one entry per line</div>
+          ${activeTab==='synonyms'
+            ? `<div style="font-size:.72rem;color:#8b89a8;margin-bottom:.35rem;font-family:monospace;">WORD <span style="color:#f4b942;">|</span> syn1, syn2, syn3 <span style="color:#f4b942;">|</span> ant1, ant2, ant3</div>`
+            : `<div style="font-size:.72rem;color:#8b89a8;margin-bottom:.35rem;font-family:monospace;">${m.fields[0]==='phrase'?'Phrase':m.fields[0]==='verb'?'Verb':'Word'} <span style="color:#f4b942;">|</span> meaning</div>`
+          }
+          <div style="font-family:monospace;font-size:.66rem;color:#6b6984;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.1em;">Example</div>
+          <pre style="font-size:.69rem;color:#a89fc8;white-space:pre-wrap;line-height:1.65;background:#0f0e17;border-radius:5px;padding:.6rem .75rem;border:1px solid #211f36;">${BULK_EXAMPLES[activeTab]}</pre>
+          <div style="font-size:.68rem;color:#8b89a8;margin-top:.5rem;">💡 Tip: Send an image of vocab to Claude and ask it to format them in the above layout. Then copy and paste here.</div>
+        </div>
+        <textarea id="bulk-textarea" class="inp" rows="6" placeholder="Paste your entries here, one per line…" style="font-family:monospace;font-size:.78rem;line-height:1.6;"></textarea>
+        <div id="bulk-msg" style="display:none;border:1px solid;border-radius:5px;padding:.5rem .75rem;font-size:.78rem;margin-top:.5rem;"></div>
+        <button onclick="handleBulkPaste()" style="width:100%;margin-top:.55rem;padding:.68rem;background:linear-gradient(135deg,#f4b942,#e8702a);color:#0f0e17;border:none;border-radius:7px;font-weight:800;font-size:.88rem;cursor:pointer;">⚡ Import All Entries</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── BULK PASTE FORMAT EXAMPLES (shown in the UI)
+const BULK_EXAMPLES = {
+  synonyms: `BRAVE | courageous, bold, valiant | cowardly, timid, fearful
+CANDID | frank, honest, sincere | dishonest, evasive, secretive
+DOCILE | meek, obedient, tame | stubborn, defiant, rebellious`,
+  ows: `Misogynist | one who hates women
+Iconoclast | one who breaks images and traditions
+Narcissist | one who is excessively self-admiring`,
+  idioms: `Bite the bullet | to endure a painful situation bravely
+Spill the beans | to reveal secret information
+Burn the midnight oil | to work late into the night`,
+  phrasal: `Give up | to stop doing something; to surrender
+Look into | to investigate or examine
+Put off | to postpone or delay`,
+  foreign: `Carpe diem | seize the day; make the most of the present
+Alter ego | a person's secondary self
+Faux pas | a social blunder or embarrassing mistake`,
+};
+
+let bulkPasteOpen = false;
+
+function toggleBulkPane(){
+  bulkPasteOpen = !bulkPasteOpen;
+  const wrap = document.getElementById('bulk-pane');
+  const btn  = document.getElementById('bulk-toggle-btn');
+  if(wrap) wrap.style.display = bulkPasteOpen ? 'block' : 'none';
+  if(btn)  btn.style.borderColor = bulkPasteOpen ? '#f4b942' : '#2e2c4a';
+}
+
+function handleBulkPaste(){
+  const m   = CAT_META.find(x=>x.key===activeTab);
+  const raw = (document.getElementById('bulk-textarea')||{value:''}).value.trim();
+  if(!raw){ showBulkMsg('error','Please paste some entries first.'); return; }
+
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  const key   = m.fields[0];
+  let added = 0, skipped = 0, errors = [];
+
+  for(let i=0; i<lines.length; i++){
+    const parts = lines[i].split('|').map(s=>s.trim());
+    let entry = {};
+
+    if(activeTab === 'synonyms'){
+      // FORMAT: WORD | syn1, syn2, syn3 | ant1, ant2, ant3
+      if(parts.length < 3){ errors.push('Line '+(i+1)+': need 3 parts (word | syns | ants)'); continue; }
+      entry = { word: parts[0].toUpperCase(), syns: parts[1].split(',').map(s=>s.trim()).filter(Boolean), ants: parts[2].split(',').map(s=>s.trim()).filter(Boolean) };
+    } else if(activeTab === 'ows'){
+      // FORMAT: Word | meaning
+      if(parts.length < 2){ errors.push('Line '+(i+1)+': need 2 parts (word | meaning)'); continue; }
+      entry = { word: parts[0], meaning: parts[1] };
+    } else if(activeTab === 'idioms'){
+      // FORMAT: Phrase | meaning
+      if(parts.length < 2){ errors.push('Line '+(i+1)+': need 2 parts (phrase | meaning)'); continue; }
+      entry = { phrase: parts[0], meaning: parts[1] };
+    } else if(activeTab === 'phrasal'){
+      // FORMAT: Verb phrase | meaning
+      if(parts.length < 2){ errors.push('Line '+(i+1)+': need 2 parts (verb | meaning)'); continue; }
+      entry = { verb: parts[0], meaning: parts[1] };
+    } else if(activeTab === 'foreign'){
+      // FORMAT: Word/phrase | meaning
+      if(parts.length < 2){ errors.push('Line '+(i+1)+': need 2 parts (word | meaning)'); continue; }
+      entry = { word: parts[0], meaning: parts[1] };
+    }
+
+    const exists = db[activeTab].some(e=>(e[key]||'').toLowerCase()===(entry[key]||'').toLowerCase());
+    if(exists){ skipped++; continue; }
+    db[activeTab].push(entry);
+    const sk = srKey(entry[key], activeTab);
+    srData[sk] = {stage:0, nextDue:todayStr(), addedOn:todayStr()};
+    added++;
+  }
+
+  saveDb(); saveSR(); renderList();
+  document.getElementById('mgr-count').textContent = db[activeTab].length+' entries';
+
+  let msg = '✓ Added '+added+' entries.';
+  if(skipped) msg += ' '+skipped+' skipped (already exist).';
+  if(errors.length) msg += ' Errors: '+errors.join('; ');
+  showBulkMsg(added > 0 ? 'success' : 'error', msg);
+
+  if(added > 0) document.getElementById('bulk-textarea').value = '';
+}
+
+function showBulkMsg(type, msg){
+  const el = document.getElementById('bulk-msg');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.color  = type==='success' ? '#4ade80' : '#f87171';
+  el.style.background = type==='success' ? 'rgba(74,222,128,.1)' : 'rgba(248,113,113,.1)';
+  el.style.borderColor = type==='success' ? 'rgba(74,222,128,.4)' : 'rgba(248,113,113,.4)';
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.style.display='none', 4000);
+}
+
+function handleAdd(){
+  const m=CAT_META.find(x=>x.key===activeTab);
+  const entry={};
+  for(const f of m.fields){
+    const val=(document.getElementById('field-'+f)||{value:''}).value.trim();
+    if(!val){showFormMsg('error','"'+FIELD_LABELS[f]+'" cannot be empty.');return;}
+    entry[f]=(f==='syns'||f==='ants')?val.split(',').map(s=>s.trim()).filter(Boolean):val;
+  }
+  const key=m.fields[0];
+  if(db[activeTab].some(e=>e[key].toLowerCase()===entry[key].toLowerCase())){showFormMsg('error','"'+entry[key]+'" already exists.');return;}
+  db[activeTab].push(entry); saveDb();
+  // Schedule for SR immediately (due today)
+  const sk = srKey(entry[key], activeTab);
+  srData[sk] = {stage:0, nextDue:todayStr(), addedOn:todayStr()};
+  saveSR();
+  m.fields.forEach(f=>{const el=document.getElementById('field-'+f);if(el)el.value='';});
+  showFormMsg('success','✓ "'+entry[key]+'" added! Scheduled for today\'s review.');
+  renderList();
+  document.getElementById('mgr-count').textContent=db[activeTab].length+' entries';
+}
+
+function showFormMsg(type,msg){
+  const err=document.getElementById('form-error'),suc=document.getElementById('form-success');
+  err.style.display='none';suc.style.display='none';
+  if(type==='error'){err.textContent=msg;err.style.display='';}
+  else{suc.textContent=msg;suc.style.display='';setTimeout(()=>suc.style.display='none',2800);}
+}
+
+function renderList(){
+  const m=CAT_META.find(x=>x.key===activeTab);
+  const search=(document.getElementById('search-input')||{value:''}).value.toLowerCase().trim();
+  const key=m.fields[0];
+  const builtInLen={synonyms:DEFAULT_SYNONYMS.length,ows:DEFAULT_OWS.length,idioms:DEFAULT_IDIOMS.length,phrasal:DEFAULT_PHRASAL.length,foreign:DEFAULT_FOREIGN.length}[activeTab];
+  const list=db[activeTab];
+  const filtered=search?list.filter(e=>e[key].toLowerCase().includes(search)):list;
+  document.getElementById('list-count').textContent=filtered.length+' / '+list.length+' entries';
+  if(filtered.length===0){document.getElementById('word-list').innerHTML=`<div style="text-align:center;padding:2rem;color:#8b89a8;font-size:.85rem;">${search?'No matches found.':'No entries yet. Add one above!'}</div>`;return;}
+  document.getElementById('word-list').innerHTML=filtered.map((entry)=>{
+    const realIdx=list.indexOf(entry);
+    const isBuiltIn=realIdx<builtInLen;
+    const val2=activeTab==='synonyms'?`<span style="color:#60a5fa;">Syn: </span>${entry.syns.join(', ')}<br><span style="color:#f472b6;">Ant: </span>${entry.ants.join(', ')}`:entry[m.fields[1]];
+    const sk=srKey(entry[key],activeTab);
+    const rec=srData[sk];
+    const stage=rec?rec.stage:0;
+    const stageColor=SR_STAGE_COLORS[stage];
+    const stageBadge=`<span style="font-size:.55rem;font-family:monospace;background:${stageColor}22;color:${stageColor};padding:.1rem .35rem;border-radius:3px;border:1px solid ${stageColor}44;">${SR_STAGE_LABELS[stage]}</span>`;
+    const nextDue=rec&&stage<4?`<span style="font-size:.62rem;color:#8b89a8;font-family:monospace;display:block;margin-top:.2rem;">Next review: ${rec.nextDue<=todayStr()?'<span style=color:#f4b942;>Due today</span>':rec.nextDue}</span>`:'';
+    const deleteBtn=deleteConfirmIdx===realIdx
+      ?`<div style="display:flex;gap:.3rem;flex-shrink:0;">
+          <button onclick="confirmDelete(${realIdx})" style="padding:.3rem .6rem;background:rgba(248,113,113,.2);border:1px solid #f87171;border-radius:5px;color:#f87171;font-size:.72rem;cursor:pointer;">Delete</button>
+          <button onclick="cancelDelete()" style="padding:.3rem .5rem;background:#1a1830;border:1px solid #2e2c4a;border-radius:5px;color:#8b89a8;font-size:.72rem;cursor:pointer;">Cancel</button>
+        </div>`
+      :`<button class="del-btn" onclick="askDelete(${realIdx})">✕</button>`;
+    return `<div class="row-item">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:.9rem;color:${m.color};margin-bottom:.25rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+          ${entry[key]}
+          ${isBuiltIn?'<span style="font-size:.55rem;font-family:monospace;background:#2e2c4a;color:#8b89a8;padding:.1rem .35rem;border-radius:3px;">built-in</span>':''}
+          ${stageBadge}
+        </div>
+        <div style="font-size:.78rem;color:#8b89a8;">${val2}</div>
+        ${nextDue}
+      </div>
+      ${deleteBtn}
+    </div>`;
+  }).join('');
+}
+function askDelete(i){deleteConfirmIdx=i;renderList();}
+function cancelDelete(){deleteConfirmIdx=null;renderList();}
+function confirmDelete(i){
+  const m=CAT_META.find(x=>x.key===activeTab);
+  const key=m.fields[0];
+  const entry=db[activeTab][i];
+  if(entry){ const sk=srKey(entry[key],activeTab); delete srData[sk]; saveSR(); }
+  db[activeTab].splice(i,1); saveDb();
+  deleteConfirmIdx=null; renderList();
+  document.getElementById('mgr-count').textContent=db[activeTab].length+' entries';
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════════════════════════════
+function exportWords(){
+  const payload = {
+    version: 1,
+    exportedOn: todayStr(),
+    db: {
+      synonyms: db.synonyms.filter((_,i)=>i>=DEFAULT_SYNONYMS.length),
+      ows:      db.ows.filter((_,i)=>i>=DEFAULT_OWS.length),
+      idioms:   db.idioms.filter((_,i)=>i>=DEFAULT_IDIOMS.length),
+      phrasal:  db.phrasal.filter((_,i)=>i>=DEFAULT_PHRASAL.length),
+      foreign:  db.foreign.filter((_,i)=>i>=DEFAULT_FOREIGN.length),
+    },
+    srData,
+    activityLog,
+  };
+  const total = Object.values(payload.db).reduce((s,a)=>s+a.length,0);
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vocabforge-backup-'+todayStr()+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showImportExportMsg('✓ Exported '+total+' custom words + SR progress', '#4ade80');
+}
+
+function importWords(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!data.version || !data.db) throw new Error('Invalid file format');
+
+      // Merge custom words (avoid duplicates with built-ins and existing)
+      const keyMap = {synonyms:'word',ows:'word',idioms:'phrase',phrasal:'verb',foreign:'word'};
+      let added = 0, skipped = 0;
+      for(const cat of Object.keys(db)){
+        const wk = keyMap[cat];
+        const incoming = data.db[cat] || [];
+        for(const entry of incoming){
+          const exists = db[cat].some(e=>(e[wk]||'').toLowerCase()===(entry[wk]||'').toLowerCase());
+          if(!exists){ db[cat].push(entry); added++; }
+          else skipped++;
+        }
+      }
+      saveDb();
+
+      // Restore SR data (merge — don't overwrite existing progress)
+      if(data.srData){
+        for(const [k,v] of Object.entries(data.srData)){
+          if(!srData[k]) srData[k] = v;
+        }
+        saveSR();
+      }
+
+      // Restore activity log (merge)
+      if(data.activityLog){
+        for(const d of data.activityLog){
+          if(!activityLog.includes(d)) activityLog.push(d);
+        }
+        activityLog.sort();
+        localStorage.setItem('vf_activity', JSON.stringify(activityLog));
+      }
+
+      initSRForAllWords();
+      renderManager();
+      const msg = '✓ Imported '+added+' words'+( skipped>0?' ('+skipped+' already existed)':'' );
+      showImportExportMsg(msg, '#4ade80');
+    } catch(err) {
+      showImportExportMsg('✗ Invalid backup file. Please use a VocabForge export.', '#f87171');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function showImportExportMsg(msg, color){
+  const el = document.getElementById('import-export-msg');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.color = color;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.style.display='none', 3500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// INTRO WALKTHROUGH
+// ══════════════════════════════════════════════════════════════
+const INTRO_SLIDES = [
+  {
+    render: () => `
+      <div style="text-align:center;margin-bottom:.5rem;">
+        <div style="font-size:3.6rem;font-weight:900;letter-spacing:-.04em;line-height:1;margin-bottom:.6rem;">
+          <span style="color:var(--gold);">VOCAB</span><span style="color:#e8e6ff;">FORGE</span>
+        </div>
+        <div style="font-size:.72rem;font-family:monospace;letter-spacing:.2em;color:#c8922a;text-transform:uppercase;margin-bottom:1.4rem;">SSC CGL Vocabulary Builder</div>
+        <div style="font-size:1.05rem;color:var(--label);line-height:1.7;max-width:320px;margin:0 auto;">
+          Master synonyms, antonyms, one-word substitutions, idioms, phrasal verbs &amp; foreign words — the smart way.
+        </div>
+      </div>`
+  },
+  {
+    render: () => `
+      <div>
+        <div style="font-size:1.15rem;font-weight:800;margin-bottom:.3rem;text-align:center;">What's inside</div>
+        <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:1.2rem;">5 categories, built-in SSC word bank</div>
+        <div style="display:flex;flex-direction:column;gap:.55rem;">
+          ${[
+            ['≈','#60a5fa','Synonyms & Antonyms','Classic SSC synonym/antonym MCQs'],
+            ['◈','#a78bfa','One Word Substitutions','Find the single word for a definition'],
+            ['💬','#fb923c','Idioms & Phrases','Meanings of common English idioms'],
+            ['🔗','#e879f9','Phrasal Verbs','Give up, look into, put off…'],
+            ['🌐','#38bdf8','Foreign Words','Bona fide, carpe diem, alter ego…'],
+          ].map(([icon,color,title,sub],i) => `
+            <div class="feat-card" style="animation-delay:${i*0.05}s;">
+              <span style="font-size:1.1rem;width:28px;text-align:center;flex-shrink:0;color:${color};">${icon}</span>
+              <div>
+                <div style="font-size:.88rem;font-weight:700;color:${color};margin-bottom:.1rem;">${title}</div>
+                <div style="font-size:.75rem;color:var(--muted);">${sub}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`
+  },
+  {
+    render: () => `
+      <div>
+        <div style="font-size:1.15rem;font-weight:800;margin-bottom:.3rem;text-align:center;">How it works</div>
+        <div style="font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:1.2rem;">Built on spaced repetition science</div>
+        <div style="display:flex;flex-direction:column;gap:.55rem;">
+          ${[
+            ['📚','Today\'s Review','Words due for review appear here first. Always do this before free practice.'],
+            ['⚡','Free Practice','Pick a category, set question count, go timed or relaxed. Pure MCQ drill.'],
+            ['⭐','Mastery Stages','New → Day 3 → Day 7 → Day 20 → Mastered. Answer correctly to advance.'],
+            ['✏️','Word Manager','Add your own words, bulk-paste from notes, or import a backup file.'],
+          ].map(([icon,title,desc],i) => `
+            <div class="feat-card" style="animation-delay:${i*0.06}s;">
+              <span style="font-size:1.2rem;flex-shrink:0;">${icon}</span>
+              <div>
+                <div style="font-size:.88rem;font-weight:700;margin-bottom:.15rem;">${title}</div>
+                <div style="font-size:.75rem;color:var(--muted);line-height:1.55;">${desc}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`
+  },
+  {
+    render: () => `
+      <div style="text-align:center;">
+        <div style="font-size:3rem;margin-bottom:.8rem;">🎯</div>
+        <div style="font-size:1.3rem;font-weight:900;margin-bottom:.5rem;">Ready to forge your vocab?</div>
+        <div style="font-size:.88rem;color:var(--muted);line-height:1.7;max-width:300px;margin:0 auto 1.6rem;">
+          Start with Today's Review if any words are due, or jump straight into a Free Practice session.
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;text-align:left;">
+          <div style="font-size:.65rem;font-family:monospace;letter-spacing:.18em;color:#c8922a;text-transform:uppercase;margin-bottom:.5rem;">Quick tip</div>
+          <div style="font-size:.82rem;color:var(--label);line-height:1.6;">
+            Open <strong style="color:#e8e6ff;">Word Manager</strong> → <em>Bulk Paste</em> to add entire word lists at once. You can even ask Claude to format your notes into the paste format.
+          </div>
+        </div>
+      </div>`
+  }
+];
+
+let introStep = 0;
+
+function renderIntroSlide(){
+  const total = INTRO_SLIDES.length;
+  // Dots
+  document.getElementById('intro-dots').innerHTML = INTRO_SLIDES.map((_,i) =>
+    `<div class="intro-dot ${i===introStep?'active':''}"></div>`).join('');
+  // Slide
+  const wrap = document.getElementById('intro-slide-wrap');
+  wrap.innerHTML = `<div class="intro-fade">${INTRO_SLIDES[introStep].render()}</div>`;
+  wrap.scrollTop = 0;
+  // Buttons
+  const backBtn = document.getElementById('intro-back-btn');
+  const nextBtn = document.getElementById('intro-next-btn');
+  backBtn.style.display = introStep > 0 ? '' : 'none';
+  const isLast = introStep === total - 1;
+  nextBtn.textContent = isLast ? '🚀 Let\'s go!' : 'Next →';
+}
+
+function introNext(){
+  if(introStep < INTRO_SLIDES.length - 1){
+    introStep++;
+    renderIntroSlide();
+  } else {
+    finishIntro();
+  }
+}
+
+function introBack(){
+  if(introStep > 0){
+    introStep--;
+    renderIntroSlide();
+  }
+}
+
+function finishIntro(){
+  localStorage.setItem('vf_intro_done','1');
+  const overlay = document.getElementById('intro-overlay');
+  overlay.classList.add('hiding');
+  setTimeout(()=>{ overlay.style.display='none'; }, 420);
+}
+
+function maybeShowIntro(){
+  if(localStorage.getItem('vf_intro_done')){
+    document.getElementById('intro-overlay').style.display='none';
+  } else {
+    renderIntroSlide();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SUPABASE + AUTH + PAYWALL
+// ══════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://qpdkzokhebhipxwcpvle.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwZGt6b2toZWJoaXB4d2NwdmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1MjI4NjQsImV4cCI6MjA5NTA5ODg2NH0.aqPX0rEp0edfSVE4GvJfcVBVLDFDFwcT4ZmJ4kLg32s';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── Razorpay (add your Key ID here once you have it) ──
+const RAZORPAY_KEY = 'rzp_live_StE7Ob2BOYWZBW';
+
+let currentUser = null;
+let subscriberData = null;
+let authTab = 'login';
+
+// ── Auth tab switch ──
+function switchAuthTab(tab){
+  authTab = tab;
+  const isSignup = tab === 'signup';
+  document.getElementById('tab-login').style.background = isSignup ? 'transparent' : 'linear-gradient(135deg,var(--gold),var(--gold2))';
+  document.getElementById('tab-login').style.color = isSignup ? 'var(--muted)' : '#0d0c18';
+  document.getElementById('tab-signup').style.background = isSignup ? 'linear-gradient(135deg,var(--gold),var(--gold2))' : 'transparent';
+  document.getElementById('tab-signup').style.color = isSignup ? '#0d0c18' : 'var(--muted)';
+  document.getElementById('auth-ref').style.display = isSignup ? '' : 'none';
+  document.getElementById('trial-info').style.display = isSignup ? '' : 'none';
+  document.getElementById('auth-submit-btn').textContent = isSignup ? 'Create Account' : 'Sign In';
+  document.getElementById('auth-error').style.display = 'none';
+  // Read ref code from URL and pre-fill
+  if(isSignup){
+    const urlRef = new URLSearchParams(location.search).get('ref');
+    if(urlRef) document.getElementById('auth-ref').value = urlRef;
+  }
+}
+
+function toggleAuthPass(){
+  const f = document.getElementById('auth-pass');
+  f.type = f.type === 'password' ? 'text' : 'password';
+}
+
+function showAuthError(msg){
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ── Sign in / Sign up ──
+async function handleAuth(){
+  const email = document.getElementById('auth-email').value.trim();
+  const pass  = document.getElementById('auth-pass').value;
+  const ref   = document.getElementById('auth-ref').value.trim();
+  const btn   = document.getElementById('auth-submit-btn');
+
+  if(!email || !pass){ showAuthError('Please enter email and password.'); return; }
+  if(pass.length < 6){ showAuthError('Password must be at least 6 characters.'); return; }
+
+  btn.textContent = '...'; btn.disabled = true;
+  document.getElementById('auth-error').style.display = 'none';
+
+  try {
+    if(authTab === 'login'){
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if(error) throw error;
+    } else {
+      const { error } = await sb.auth.signUp({
+        email, password: pass,
+        options: { data: { referred_by: ref || null } }
+      });
+      if(error) throw error;
+    }
+    // onAuthStateChange will handle the rest
+  } catch(e){
+    showAuthError(e.message || 'Something went wrong. Try again.');
+    btn.textContent = authTab === 'login' ? 'Sign In' : 'Create Account';
+    btn.disabled = false;
+  }
+}
+
+// ── Load subscriber row from Supabase ──
+async function loadSubscriber(userId){
+  const { data, error } = await sb.from('subscribers').select('*').eq('id', userId).single();
+  if(error) return null;
+  return data;
+}
+
+// ── Check if user has access ──
+function hasAccess(sub){
+  if(!sub) return false;
+  const now = new Date();
+  // Paid subscription still valid
+  if(sub.paid_until && new Date(sub.paid_until) > now) return true;
+  // Within trial window
+  const trialEnd = new Date(new Date(sub.trial_start).getTime() + sub.trial_days * 86400000);
+  return now < trialEnd;
+}
+
+function trialDaysLeft(sub){
+  const now = new Date();
+  const trialEnd = new Date(new Date(sub.trial_start).getTime() + sub.trial_days * 86400000);
+  const ms = trialEnd - now;
+  return Math.max(0, Math.ceil(ms / 86400000));
+}
+
+function isPaidUser(sub){
+  return sub && sub.paid_until && new Date(sub.paid_until) > new Date();
+}
+
+// ── Show trial banner ──
+function updateTrialBanner(sub){
+  const banner = document.getElementById('trial-banner');
+  const text   = document.getElementById('trial-banner-text');
+  if(!sub || isPaidUser(sub)){ banner.style.display = 'none'; return; }
+  const days = trialDaysLeft(sub);
+  if(days <= 0){ banner.style.display = 'none'; return; }
+  banner.style.display = 'flex';
+  text.textContent = days === 1 ? '⚠️ Last day of trial' : `⏳ ${days} day${days>1?'s':''} left in trial`;
+}
+
+// ── Show paywall ──
+function showPaywall(){
+  const pg = document.getElementById('paywall-gate');
+  pg.style.display = 'flex';
+  // Show close button only if user is still within trial (just previewing upgrade)
+  const closeWrap = document.getElementById('paywall-close-wrap');
+  closeWrap.style.display = hasAccess(subscriberData) ? '' : 'none';
+  // Fill referral link
+  if(subscriberData?.referral_code){
+    const link = `${location.origin}${location.pathname}?ref=${subscriberData.referral_code}`;
+    document.getElementById('paywall-ref-link').value = link;
+  }
+}
+
+// ── Close paywall (only if still has access) ──
+function closePaywall(){
+  if(hasAccess(subscriberData)){
+    document.getElementById('paywall-gate').style.display = 'none';
+  }
+}
+
+function copyRefLink(){
+  const el = document.getElementById('paywall-ref-link');
+  navigator.clipboard.writeText(el.value).catch(()=>{
+    el.select(); document.execCommand('copy');
+  });
+  const btn = el.nextElementSibling;
+  btn.textContent = 'Copied!'; btn.style.color='var(--green)';
+  setTimeout(()=>{ btn.textContent='Copy'; btn.style.color='var(--gold)'; }, 2000);
+}
+
+// ── Razorpay payment ──
+function handlePayment(){
+  if(RAZORPAY_KEY.includes('REPLACE')){
+    alert('Razorpay key not set yet. Add your Key ID in the RAZORPAY_KEY variable.');
+    return;
+  }
+  const options = {
+    key: RAZORPAY_KEY,
+    amount: 5000, // ₹50 in paise
+    currency: 'INR',
+    name: 'VocabForge',
+    description: 'Monthly Subscription',
+    prefill: { email: currentUser?.email || '' },
+    theme: { color: '#f4b942' },
+    handler: async function(response){
+      // Mark paid in Supabase
+      const paidUntil = new Date();
+      paidUntil.setMonth(paidUntil.getMonth() + 1);
+      await sb.from('subscribers').update({
+        paid_until: paidUntil.toISOString(),
+        razorpay_payment_id: response.razorpay_payment_id
+      }).eq('id', currentUser.id);
+      subscriberData = await loadSubscriber(currentUser.id);
+      document.getElementById('paywall-gate').style.display = 'none';
+      updateTrialBanner(subscriberData);
+      alert('✅ Payment successful! Welcome to VocabForge Pro.');
+    }
+  };
+  const rzp = new Razorpay(options);
+  rzp.open();
+}
+
+// ── Mark first session ──
+async function markFirstSession(){
+  if(!subscriberData || subscriberData.first_session_done) return;
+  await sb.from('subscribers').update({ first_session_done: true }).eq('id', currentUser.id);
+  subscriberData.first_session_done = true;
+  // Reward referrer if exists
+  if(subscriberData.referred_by){
+    const { data: refs } = await sb.from('referrals')
+      .select('*').eq('referee_id', currentUser.id).eq('reward_given', false);
+    if(refs && refs.length > 0){
+      // Extend referrer by 30 days
+      const { data: referrer } = await sb.from('subscribers')
+        .select('paid_until, trial_start, trial_days').eq('id', subscriberData.referred_by).single();
+      if(referrer){
+        const base = referrer.paid_until ? new Date(referrer.paid_until) : new Date();
+        if(base < new Date()) base.setTime(Date.now());
+        base.setDate(base.getDate() + 30);
+        await sb.from('subscribers').update({ paid_until: base.toISOString() }).eq('id', subscriberData.referred_by);
+        await sb.from('referrals').update({ reward_given: true }).eq('referee_id', currentUser.id);
+      }
+    }
+  }
+}
+
+// ── Logout ──
+async function handleLogout(){
+  await sb.auth.signOut();
+  currentUser = null; subscriberData = null;
+  document.getElementById('paywall-gate').style.display = 'none';
+  document.getElementById('trial-banner').style.display = 'none';
+  document.getElementById('auth-gate').style.display = 'flex';
+  document.getElementById('auth-gate').style.opacity = '1';
+}
+
+// ── Auth state listener — main entry point ──
+sb.auth.onAuthStateChange(async (event, session) => {
+  if(session?.user){
+    currentUser = session.user;
+    subscriberData = await loadSubscriber(currentUser.id);
+
+    // Hide auth gate
+    const ag = document.getElementById('auth-gate');
+    ag.classList.add('hiding');
+    setTimeout(()=>{ ag.style.display = 'none'; }, 350);
+
+    if(!hasAccess(subscriberData)){
+      showPaywall();
+      return;
+    }
+
+    // Access granted
+    document.getElementById('paywall-gate').style.display = 'none';
+    updateTrialBanner(subscriberData);
+
+    // Show intro for first-timers
+    if(!localStorage.getItem('vf_intro_done')){
+      renderIntroSlide();
+    } else {
+      document.getElementById('intro-overlay').style.display = 'none';
+    }
+
+    initSRForAllWords();
+    renderHome();
+
+  } else {
+    // Not logged in — show auth gate
+    document.getElementById('auth-gate').style.display = 'flex';
+    document.getElementById('auth-gate').style.opacity = '1';
+    document.getElementById('auth-gate').classList.remove('hiding');
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+// Auth state listener handles everything — no manual init needed
+</script>
+</body>
+</html>
